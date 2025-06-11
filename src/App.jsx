@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import ThemeProvider from './components/ui/ThemeProvider'
 import Router, { Page } from './components/Router'
 import ConnectionPage from './components/ConnectionPage'
 import DatabaseDashboard from './components/DatabaseDashboard'
+import './styles/globals.css'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('connection')
@@ -24,14 +26,18 @@ function App() {
   }
 
   return (
-    <Router currentPage={currentPage}>
-      <Page name="connection">
-        <ConnectionPage onConnect={handleConnect} />
-      </Page>
-      <Page name="dashboard">
-        <DatabaseDashboard config={dbConfig} onDisconnect={handleDisconnect} />
-      </Page>
-    </Router>
+    <ThemeProvider>
+      <div className="app animate-fadeIn">
+        <Router currentPage={currentPage}>
+          <Page name="connection">
+            <ConnectionPage onConnect={handleConnect} />
+          </Page>
+          <Page name="dashboard">
+            <DatabaseDashboard config={dbConfig} onDisconnect={handleDisconnect} />
+          </Page>
+        </Router>
+      </div>
+    </ThemeProvider>
   )
 }
 

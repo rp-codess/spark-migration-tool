@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import Button from './ui/Button'
+import ThemeToggle from './ui/ThemeToggle'
 
 export default function ConnectionPage({ onConnect }) {
   const [config, setConfig] = useState({
@@ -66,47 +68,65 @@ export default function ConnectionPage({ onConnect }) {
     }
   }
 
+  const pageStyles = {
+    minHeight: '100vh',
+    background: 'var(--gradient-primary)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '20px',
+    position: 'relative'
+  }
+
+  const cardStyles = {
+    background: 'var(--bg-primary)',
+    borderRadius: '16px',
+    padding: '40px',
+    boxShadow: 'var(--shadow-lg)',
+    maxWidth: '500px',
+    width: '100%',
+    position: 'relative'
+  }
+
+  const inputStyles = {
+    width: '100%',
+    padding: '12px',
+    border: '2px solid var(--border-color)',
+    borderRadius: '8px',
+    fontSize: '14px',
+    backgroundColor: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
+    transition: 'border-color 0.2s ease'
+  }
+
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px'
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '16px',
-        padding: '40px',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
-        maxWidth: '500px',
-        width: '100%'
-      }}>
+    <div style={pageStyles} className="animate-fadeIn">
+      {/* Theme toggle in top right */}
+      <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+        <ThemeToggle />
+      </div>
+
+      <div style={cardStyles} className="animate-scaleIn">
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h1 style={{ color: '#333', marginBottom: '8px', fontSize: '28px' }}>
+          <h1 style={{ color: 'var(--text-primary)', marginBottom: '8px', fontSize: '28px' }}>
             🚀 Spark Migration Tool
           </h1>
-          <p style={{ color: '#666', margin: 0 }}>
+          <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
             Connect to your database to get started
           </p>
         </div>
 
         <div style={{ display: 'grid', gap: '16px' }}>
           <div>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#333' }}>
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: 'var(--text-primary)' }}>
               Database Type
             </label>
             <select 
               value={config.type}
               onChange={(e) => handleTypeChange(e.target.value)}
-              style={{ 
-                width: '100%',
-                padding: '12px',
-                border: '2px solid #e1e5e9',
-                borderRadius: '8px',
-                fontSize: '14px',
-                backgroundColor: '#f8f9fa'
+              style={{
+                ...inputStyles,
+                backgroundColor: 'var(--bg-secondary)'
               }}
             >
               {databaseTypes.map(db => (
@@ -117,79 +137,55 @@ export default function ConnectionPage({ onConnect }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#333' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: 'var(--text-primary)' }}>
                 Host
               </label>
               <input 
                 placeholder="Enter host address" 
                 value={config.host}
                 onChange={(e) => handleConfigChange('host', e.target.value)}
-                style={{ 
-                  width: '100%',
-                  padding: '12px',
-                  border: '2px solid #e1e5e9',
-                  borderRadius: '8px',
-                  fontSize: '14px'
-                }}
+                style={inputStyles}
               />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#333' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: 'var(--text-primary)' }}>
                 Port
               </label>
               <input 
                 placeholder="Port" 
                 value={config.port}
                 onChange={(e) => setConfig({...config, port: e.target.value})}
-                style={{ 
-                  width: '100%',
-                  padding: '12px',
-                  border: '2px solid #e1e5e9',
-                  borderRadius: '8px',
-                  fontSize: '14px'
-                }}
+                style={inputStyles}
               />
             </div>
           </div>
 
           <div>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#333' }}>
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: 'var(--text-primary)' }}>
               Database
             </label>
             <input 
               placeholder="Database name" 
               value={config.database}
               onChange={(e) => setConfig({...config, database: e.target.value})}
-              style={{ 
-                width: '100%',
-                padding: '12px',
-                border: '2px solid #e1e5e9',
-                borderRadius: '8px',
-                fontSize: '14px'
-              }}
+              style={inputStyles}
             />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#333' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: 'var(--text-primary)' }}>
                 Username
               </label>
               <input 
                 placeholder="Username" 
                 value={config.username}
                 onChange={(e) => setConfig({...config, username: e.target.value})}
-                style={{ 
-                  width: '100%',
-                  padding: '12px',
-                  border: '2px solid #e1e5e9',
-                  borderRadius: '8px',
-                  fontSize: '14px'
-                }}
+                style={inputStyles}
               />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: '#333' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', color: 'var(--text-primary)' }}>
                 Password
               </label>
               <input 
@@ -197,13 +193,7 @@ export default function ConnectionPage({ onConnect }) {
                 placeholder="Password" 
                 value={config.password}
                 onChange={(e) => setConfig({...config, password: e.target.value})}
-                style={{ 
-                  width: '100%',
-                  padding: '12px',
-                  border: '2px solid #e1e5e9',
-                  borderRadius: '8px',
-                  fontSize: '14px'
-                }}
+                style={inputStyles}
               />
             </div>
           </div>
@@ -251,31 +241,22 @@ export default function ConnectionPage({ onConnect }) {
             </button>
           </div>
 
-          <button 
+          <Button 
             onClick={handleConnect}
             disabled={connecting || !config.host || !config.database || !config.username || !config.password}
-            style={{ 
-              width: '100%',
-              padding: '14px',
-              backgroundColor: connecting ? '#ccc' : '#667eea',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: connecting ? 'not-allowed' : 'pointer',
-              marginTop: '8px',
-              transition: 'all 0.2s'
-            }}
+            loading={connecting}
+            size="lg"
+            style={{ marginTop: '8px' }}
+            icon="🚀"
           >
-            {connecting ? '🔄 Connecting...' : '🚀 Connect to Database'}
-          </button>
+            Connect to Database
+          </Button>
 
           {error && (
             <div style={{ 
               padding: '12px', 
-              backgroundColor: '#ffebee', 
-              color: '#c62828', 
+              backgroundColor: 'var(--color-danger)',
+              color: 'white', 
               borderRadius: '8px',
               fontSize: '14px'
             }}>

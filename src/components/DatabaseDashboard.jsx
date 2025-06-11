@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
+import Button from './ui/Button'
+import ThemeToggle from './ui/ThemeToggle'
 
 export default function DatabaseDashboard({ config, onDisconnect }) {
   const [tables, setTables] = useState([])
@@ -286,55 +288,60 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     }
   }
 
+  const headerStyles = {
+    background: 'var(--gradient-primary)',
+    color: 'white',
+    padding: '20px',
+    boxShadow: 'var(--shadow-lg)'
+  }
+
+  const cardStyles = {
+    background: 'var(--bg-primary)',
+    borderRadius: '12px',
+    boxShadow: 'var(--shadow-md)',
+    overflow: 'hidden',
+    border: '1px solid var(--border-color)'
+  }
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-secondary)' }} className="animate-fadeIn">
       {/* Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: 'white',
-        padding: '20px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-      }}>
+      <div style={headerStyles} className="animate-slideInDown">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1200px', margin: '0 auto' }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: '24px' }}>📊 Database Explorer</h1>
+            <h1 style={{ margin: 0, fontSize: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              📊 Database Explorer
+            </h1>
             <p style={{ margin: '4px 0 0 0', opacity: 0.9 }}>
               {config.type.toUpperCase()} • {config.host} • {config.database}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <ThemeToggle />
             <div style={{ position: 'relative' }}>
-              <button
+              <Button
                 onClick={() => setShowDownloadOptions(!showDownloadOptions)}
                 disabled={downloading || tables.length === 0}
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: downloading ? '#ccc' : '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: downloading ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
+                variant="success"
+                icon={downloading ? '⏳' : '📥'}
               >
-                {downloading ? '⏳' : '📥'} Download All Schemas ▼
-              </button>
+                Download All Schemas ▼
+              </Button>
               
+              {/* Download options dropdown */}
               {showDownloadOptions && !downloading && (
                 <div style={{
                   position: 'absolute',
                   top: '100%',
                   right: 0,
-                  backgroundColor: 'white',
-                  border: '1px solid #ddd',
+                  backgroundColor: 'var(--bg-primary)',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '6px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  boxShadow: 'var(--shadow-lg)',
                   zIndex: 1000,
                   minWidth: '250px',
                   marginTop: '4px'
-                }}>
+                }} className="animate-scaleIn">
                   <button
                     onClick={downloadAllSchemasSingle}
                     style={{
@@ -344,14 +351,12 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                       border: 'none',
                       textAlign: 'left',
                       cursor: 'pointer',
-                      color: '#333',
-                      borderBottom: '1px solid #eee'
+                      color: 'var(--text-primary)',
+                      borderBottom: '1px solid var(--border-color)'
                     }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
                     📄 Single JSON File
-                    <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                       All schemas in one file
                     </div>
                   </button>
@@ -364,38 +369,30 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                       border: 'none',
                       textAlign: 'left',
                       cursor: 'pointer',
-                      color: '#333'
+                      color: 'var(--text-primary)'
                     }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
                     📁 Individual Files
-                    <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                       Separate file for each table
                     </div>
                   </button>
                 </div>
               )}
             </div>
-            <button
+            <Button
               onClick={onDisconnect}
-              style={{
-                padding: '10px 16px',
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
+              variant="danger"
+              icon="🔌"
             >
-              🔌 Disconnect
-            </button>
+              Disconnect
+            </Button>
           </div>
         </div>
         
         {/* Progress Bar */}
         {downloading && (
-          <div style={{ maxWidth: '1200px', margin: '16px auto 0 auto' }}>
+          <div style={{ maxWidth: '1200px', margin: '16px auto 0 auto' }} className="animate-slideInDown">
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -409,22 +406,16 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                 <span style={{ fontSize: '14px', opacity: 0.9 }}>
                   {downloadProgress.total > 0 ? Math.round((downloadProgress.current / downloadProgress.total) * 100) : 0}%
                 </span>
-                <button
+                <Button
                   onClick={cancelDownload}
                   disabled={downloadCancelled}
-                  style={{
-                    padding: '6px 12px',
-                    backgroundColor: downloadCancelled ? '#6c757d' : '#dc3545',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: downloadCancelled ? 'not-allowed' : 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}
+                  variant="danger"
+                  size="sm"
+                  loading={downloadCancelled}
+                  icon="✕"
                 >
-                  {downloadCancelled ? '⏳ Cancelling...' : '✕ Cancel'}
-                </button>
+                  Cancel
+                </Button>
               </div>
             </div>
             <div style={{
@@ -450,83 +441,66 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
         {/* Stats Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           <div style={{
-            background: 'white',
+            ...cardStyles,
             padding: '20px',
-            borderRadius: '12px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
             textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#667eea' }}>{tables.length}</div>
-            <div style={{ color: '#666', marginTop: '4px' }}>Total Tables</div>
+          }} className="animate-scaleIn">
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--color-primary)' }}>{tables.length}</div>
+            <div style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>Total Tables</div>
           </div>
           <div style={{
-            background: 'white',
+            ...cardStyles,
             padding: '20px',
-            borderRadius: '12px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
             textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#28a745' }}>
+          }} className="animate-scaleIn">
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--color-success)' }}>
               {selectedTable ? tableSchema.length : 0}
             </div>
-            <div style={{ color: '#666', marginTop: '4px' }}>Columns Selected</div>
+            <div style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>Columns Selected</div>
           </div>
-          {downloading && (
-            <div style={{
-              background: 'linear-gradient(135deg, #667eea, #764ba2)',
-              color: 'white',
-              padding: '20px',
-              borderRadius: '12px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '32px', fontWeight: 'bold' }}>
-                {downloadProgress.current}
-              </div>
-              <div style={{ marginTop: '4px', opacity: 0.9 }}>Downloaded</div>
-            </div>
-          )}
         </div>
 
         {/* Main Explorer */}
-        <div style={{
-          background: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-          overflow: 'hidden'
-        }}>
+        <div style={cardStyles}>
           <div style={{ display: 'flex', height: '600px' }}>
             {/* Tables Sidebar */}
-            <div style={{ width: '350px', borderRight: '1px solid #e9ecef' }}>
+            <div style={{ width: '350px', borderRight: `1px solid var(--border-color)` }}>
               <div style={{
                 padding: '16px',
-                backgroundColor: '#f8f9fa',
-                borderBottom: '1px solid #e9ecef',
+                backgroundColor: 'var(--bg-secondary)',
+                borderBottom: `1px solid var(--border-color)`,
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center'
               }}>
-                <h3 style={{ margin: 0, fontSize: '16px' }}>Tables ({tables.length})</h3>
+                <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-primary)' }}>Tables ({tables.length})</h3>
                 <button 
                   onClick={loadTables} 
                   disabled={loading}
                   style={{ 
                     padding: '6px 12px', 
                     fontSize: '12px',
-                    backgroundColor: '#6c757d',
-                    color: 'white',
-                    border: 'none',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
+                    border: `1px solid var(--border-color)`,
                     borderRadius: '4px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.backgroundColor = 'var(--bg-hover)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.backgroundColor = 'var(--bg-tertiary)'
                   }}
                 >
                   {loading ? '🔄' : '↻'} Refresh
                 </button>
               </div>
               
-              <div style={{ height: '532px', overflowY: 'auto' }}>
+              <div style={{ height: '532px', overflowY: 'auto', backgroundColor: 'var(--bg-primary)' }}>
                 {loading && tables.length === 0 ? (
-                  <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                  <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                     <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
                     Loading tables...
                   </div>
@@ -539,27 +513,43 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                         style={{ 
                           padding: '12px',
                           cursor: 'pointer',
-                          backgroundColor: selectedTable?.name === table.name ? '#e3f2fd' : 'transparent',
+                          backgroundColor: selectedTable?.name === table.name ? 'var(--color-primary)' : 'transparent',
                           borderRadius: '8px',
                           marginBottom: '4px',
-                          border: selectedTable?.name === table.name ? '2px solid #1976d2' : '2px solid transparent',
-                          transition: 'all 0.2s'
+                          border: selectedTable?.name === table.name ? `2px solid var(--color-primary)` : '2px solid transparent',
+                          transition: 'all 0.2s ease',
+                          color: selectedTable?.name === table.name ? 'white' : 'var(--text-primary)'
                         }}
                         onMouseEnter={(e) => {
                           if (selectedTable?.name !== table.name) {
-                            e.currentTarget.style.backgroundColor = '#f5f5f5'
+                            e.currentTarget.style.backgroundColor = 'var(--bg-hover)'
+                            e.currentTarget.style.color = 'var(--text-primary)'
                           }
                         }}
                         onMouseLeave={(e) => {
                           if (selectedTable?.name !== table.name) {
                             e.currentTarget.style.backgroundColor = 'transparent'
+                            e.currentTarget.style.color = 'var(--text-primary)'
                           }
                         }}
                       >
-                        <div style={{ fontWeight: '600', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ 
+                          fontWeight: '600', 
+                          marginBottom: '4px', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '8px',
+                          color: 'inherit'
+                        }}>
                           📊 {table.name}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#666', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: selectedTable?.name === table.name ? 'rgba(255,255,255,0.8)' : 'var(--text-tertiary)', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '4px' 
+                        }}>
                           🏗️ {table.schema}
                         </div>
                       </div>
@@ -573,70 +563,101 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
               <div style={{
                 padding: '16px',
-                backgroundColor: '#f8f9fa',
-                borderBottom: '1px solid #e9ecef',
+                backgroundColor: 'var(--bg-secondary)',
+                borderBottom: `1px solid var(--border-color)`,
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center'
               }}>
-                <h3 style={{ margin: 0, fontSize: '16px' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-primary)' }}>
                   {selectedTable ? `${selectedTable.schema}.${selectedTable.name}` : 'Select a table to view schema'}
                 </h3>
                 {selectedTable && tableSchema.length > 0 && (
-                  <button
+                  <Button
                     onClick={downloadTableSchema}
-                    style={{
-                      padding: '6px 12px',
-                      fontSize: '12px',
-                      backgroundColor: '#28a745',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
+                    variant="success"
+                    icon="📥"
+                    size="sm"
                   >
-                    📥 Download Schema
-                  </button>
+                    Download Schema
+                  </Button>
                 )}
               </div>
               
-              <div style={{ flex: 1, overflowY: 'auto' }}>
+              <div style={{ flex: 1, overflowY: 'auto', backgroundColor: 'var(--bg-primary)' }}>
                 {loading && selectedTable ? (
-                  <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                  <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                     <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
                     Loading schema...
                   </div>
                 ) : selectedTable && tableSchema.length > 0 ? (
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ backgroundColor: '#f8f9fa' }}>
-                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Column</th>
-                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Type</th>
-                        <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Nullable</th>
-                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Default</th>
+                      <tr style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                        <th style={{ 
+                          padding: '12px', 
+                          textAlign: 'left', 
+                          borderBottom: `2px solid var(--border-color)`, 
+                          fontWeight: '600',
+                          color: 'var(--text-primary)'
+                        }}>Column</th>
+                        <th style={{ 
+                          padding: '12px', 
+                          textAlign: 'left', 
+                          borderBottom: `2px solid var(--border-color)`, 
+                          fontWeight: '600',
+                          color: 'var(--text-primary)'
+                        }}>Type</th>
+                        <th style={{ 
+                          padding: '12px', 
+                          textAlign: 'center', 
+                          borderBottom: `2px solid var(--border-color)`, 
+                          fontWeight: '600',
+                          color: 'var(--text-primary)'
+                        }}>Nullable</th>
+                        <th style={{ 
+                          padding: '12px', 
+                          textAlign: 'left', 
+                          borderBottom: `2px solid var(--border-color)`, 
+                          fontWeight: '600',
+                          color: 'var(--text-primary)'
+                        }}>Default</th>
                       </tr>
                     </thead>
                     <tbody>
                       {tableSchema.map((column, index) => (
-                        <tr key={index} style={{ borderBottom: '1px solid #e9ecef' }}>
-                          <td style={{ padding: '12px', fontWeight: '500' }}>
+                        <tr key={index} style={{ 
+                          borderBottom: `1px solid var(--border-color)`,
+                          backgroundColor: index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)'
+                        }}>
+                          <td style={{ 
+                            padding: '12px', 
+                            fontWeight: '500',
+                            color: 'var(--text-primary)'
+                          }}>
                             {column.COLUMN_NAME || column.column_name}
                           </td>
-                          <td style={{ padding: '12px', fontFamily: 'monospace', backgroundColor: '#f8f9fa' }}>
+                          <td style={{ 
+                            padding: '12px', 
+                            fontFamily: 'monospace', 
+                            backgroundColor: 'var(--bg-tertiary)',
+                            color: 'var(--text-primary)'
+                          }}>
                             {column.DATA_TYPE || column.data_type}
                             {(column.CHARACTER_MAXIMUM_LENGTH || column.character_maximum_length) && 
                               `(${column.CHARACTER_MAXIMUM_LENGTH || column.character_maximum_length})`}
                           </td>
                           <td style={{ padding: '12px', textAlign: 'center' }}>
                             {(column.IS_NULLABLE || column.is_nullable) === 'YES' ? 
-                              <span style={{ color: '#28a745', fontSize: '16px' }}>✓</span> : 
-                              <span style={{ color: '#dc3545', fontSize: '16px' }}>✗</span>
+                              <span style={{ color: 'var(--color-success)', fontSize: '16px' }}>✓</span> : 
+                              <span style={{ color: 'var(--color-danger)', fontSize: '16px' }}>✗</span>
                             }
                           </td>
-                          <td style={{ padding: '12px', fontFamily: 'monospace', color: '#666' }}>
+                          <td style={{ 
+                            padding: '12px', 
+                            fontFamily: 'monospace', 
+                            color: 'var(--text-secondary)'
+                          }}>
                             {column.COLUMN_DEFAULT || column.column_default || '-'}
                           </td>
                         </tr>
@@ -647,7 +668,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                   <div style={{ 
                     padding: '60px', 
                     textAlign: 'center', 
-                    color: '#666',
+                    color: 'var(--text-secondary)',
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'column',
@@ -655,10 +676,10 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                     alignItems: 'center'
                   }}>
                     <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
-                    <h3 style={{ margin: '0 0 8px 0' }}>
+                    <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>
                       {selectedTable ? 'No schema information available' : 'Select a table from the list'}
                     </h3>
-                    <p style={{ margin: 0, opacity: 0.7 }}>
+                    <p style={{ margin: 0, opacity: 0.7, color: 'var(--text-secondary)' }}>
                       {selectedTable ? 'This table might be empty or have access restrictions' : 'Click on any table to view its schema details'}
                     </p>
                   </div>
@@ -672,10 +693,10 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
           <div style={{ 
             marginTop: '16px',
             padding: '16px', 
-            backgroundColor: '#ffebee', 
-            color: '#c62828', 
+            backgroundColor: 'var(--color-danger)',
+            color: 'white', 
             borderRadius: '8px',
-            border: '1px solid #ffcdd2'
+            opacity: 0.9
           }}>
             ❌ <strong>Error:</strong> {error}
           </div>
