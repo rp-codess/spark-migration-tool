@@ -1,5 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron')
 const path = require('path')
+const fs = require('fs')
+const os = require('os')
 const DatabaseManager = require('./database/DatabaseManager')
 
 function createWindow() {
@@ -59,6 +61,18 @@ ipcMain.handle('disconnect-database', async (event) => {
   try {
     DatabaseManager.disconnect()
     return { success: true }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('save-schema-to-file', async (event, data, filename) => {
+  try {
+    const documentsPath = path.join(os.homedir(), 'Documents')
+    const filePath = path.join(documentsPath, filename)
+    
+    await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+    return { success: true, filePath }
   } catch (error) {
     return { success: false, message: error.message }
   }

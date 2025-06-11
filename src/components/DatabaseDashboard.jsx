@@ -1,0 +1,380 @@
+import React, { useState, useEffect } from 'react'
+
+export default function DatabaseDashboard({ config, onDisconnect }) {
+  const [tables, setTables] = useState([])
+  const [selectedTable, setSelectedTable] = useState(null)
+  const [tableSchema, setTableSchema] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [downloading, setDownloading] = useState(false)
+
+  useEffect(() => {
+    loadTables()
+  }, [])
+
+  const loadTables = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const result = await window.electronAPI.getTables()
+      if (result.success) {
+        setTables(result.tables)
+      } else {
+        setError(result.message)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadTableSchema = async (table) => {
+    setLoading(true)
+    setError('')
+    try {
+      const result = await window.electronAPI.getTableSchema(table.name, table.schema)
+      if (result.success) {
+        setTableSchema(result.schema)
+        setSelectedTable(table)
+      } else {
+        setError(result.message)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const downloadAllSchemas = async () => {
+    setDownloading(true)
+    try {
+      const allSchemas = {}
+      
+      for (const table of tables) {
+        const result = await window.electronAPI.getTableSchema(table.name, table.schema)
+        if (result.success) {
+          allSchemas[`${table.schema}.${table.name}`] = {
+            tableName: table.name,
+            schema: table.schema,
+            columns: result.schema
+          }
+        }
+      }
+
+      const schemaData = {
+        database: config.database,
+        host: config.host,
+        type: config.type,
+        exportDate: new Date().toISOString(),
+        tables: allSchemas
+      }
+
+      await window.electronAPI.saveSchemaToFile(schemaData, `${config.database}_all_schemas.json`)
+      alert('All schemas downloaded successfully!')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  const downloadTableSchema = async () => {
+    if (!selectedTable || !tableSchema.length) return
+    
+    try {
+      const schemaData = {
+        database: config.database,
+        host: config.host,
+        type: config.type,
+        exportDate: new Date().toISOString(),
+        table: {
+          name: selectedTable.name,
+          schema: selectedTable.schema,
+          columns: tableSchema
+        }
+      }
+
+      await window.electronAPI.saveSchemaToFile(schemaData, `${selectedTable.schema}_${selectedTable.name}_schema.json`)
+      alert('Table schema downloaded successfully!')
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      {/* Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        padding: '20px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1200px', margin: '0 auto' }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '24px' }}>📊 Database Explorer</h1>
+            <p style={{ margin: '4px 0 0 0', opacity: 0.9 }}>
+              {config.type.toUpperCase()} • {config.host} • {config.database}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={downloadAllSchemas}
+              disabled={downloading || tables.length === 0}
+              style={{
+                padding: '10px 16px',
+                backgroundColor: downloading ? '#ccc' : '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: downloading ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              {downloading ? '⏳' : '📥'} Download All Schemas
+            </button>
+            <button
+              onClick={onDisconnect}
+              style={{
+                padding: '10px 16px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              🔌 Disconnect
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
+        {/* Stats Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          <div style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#667eea' }}>{tables.length}</div>
+            <div style={{ color: '#666', marginTop: '4px' }}>Total Tables</div>
+          </div>
+          <div style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#28a745' }}>
+              {selectedTable ? tableSchema.length : 0}
+            </div>
+            <div style={{ color: '#666', marginTop: '4px' }}>Columns Selected</div>
+          </div>
+        </div>
+
+        {/* Main Explorer */}
+        <div style={{
+          background: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          overflow: 'hidden'
+        }}>
+          <div style={{ display: 'flex', height: '600px' }}>
+            {/* Tables Sidebar */}
+            <div style={{ width: '350px', borderRight: '1px solid #e9ecef' }}>
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#f8f9fa',
+                borderBottom: '1px solid #e9ecef',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <h3 style={{ margin: 0, fontSize: '16px' }}>Tables ({tables.length})</h3>
+                <button 
+                  onClick={loadTables} 
+                  disabled={loading}
+                  style={{ 
+                    padding: '6px 12px', 
+                    fontSize: '12px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {loading ? '🔄' : '↻'} Refresh
+                </button>
+              </div>
+              
+              <div style={{ height: '532px', overflowY: 'auto' }}>
+                {loading && tables.length === 0 ? (
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+                    Loading tables...
+                  </div>
+                ) : (
+                  <div style={{ padding: '8px' }}>
+                    {tables.map((table, index) => (
+                      <div 
+                        key={index}
+                        onClick={() => loadTableSchema(table)}
+                        style={{ 
+                          padding: '12px',
+                          cursor: 'pointer',
+                          backgroundColor: selectedTable?.name === table.name ? '#e3f2fd' : 'transparent',
+                          borderRadius: '8px',
+                          marginBottom: '4px',
+                          border: selectedTable?.name === table.name ? '2px solid #1976d2' : '2px solid transparent',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedTable?.name !== table.name) {
+                            e.currentTarget.style.backgroundColor = '#f5f5f5'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedTable?.name !== table.name) {
+                            e.currentTarget.style.backgroundColor = 'transparent'
+                          }
+                        }}
+                      >
+                        <div style={{ fontWeight: '600', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          📊 {table.name}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#666', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          🏗️ {table.schema}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Schema Details */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#f8f9fa',
+                borderBottom: '1px solid #e9ecef',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <h3 style={{ margin: 0, fontSize: '16px' }}>
+                  {selectedTable ? `${selectedTable.schema}.${selectedTable.name}` : 'Select a table to view schema'}
+                </h3>
+                {selectedTable && tableSchema.length > 0 && (
+                  <button
+                    onClick={downloadTableSchema}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      backgroundColor: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    📥 Download Schema
+                  </button>
+                )}
+              </div>
+              
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                {loading && selectedTable ? (
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+                    Loading schema...
+                  </div>
+                ) : selectedTable && tableSchema.length > 0 ? (
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8f9fa' }}>
+                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Column</th>
+                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Type</th>
+                        <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Nullable</th>
+                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', fontWeight: '600' }}>Default</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tableSchema.map((column, index) => (
+                        <tr key={index} style={{ borderBottom: '1px solid #e9ecef' }}>
+                          <td style={{ padding: '12px', fontWeight: '500' }}>
+                            {column.COLUMN_NAME || column.column_name}
+                          </td>
+                          <td style={{ padding: '12px', fontFamily: 'monospace', backgroundColor: '#f8f9fa' }}>
+                            {column.DATA_TYPE || column.data_type}
+                            {(column.CHARACTER_MAXIMUM_LENGTH || column.character_maximum_length) && 
+                              `(${column.CHARACTER_MAXIMUM_LENGTH || column.character_maximum_length})`}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            {(column.IS_NULLABLE || column.is_nullable) === 'YES' ? 
+                              <span style={{ color: '#28a745', fontSize: '16px' }}>✓</span> : 
+                              <span style={{ color: '#dc3545', fontSize: '16px' }}>✗</span>
+                            }
+                          </td>
+                          <td style={{ padding: '12px', fontFamily: 'monospace', color: '#666' }}>
+                            {column.COLUMN_DEFAULT || column.column_default || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ 
+                    padding: '60px', 
+                    textAlign: 'center', 
+                    color: '#666',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+                    <h3 style={{ margin: '0 0 8px 0' }}>
+                      {selectedTable ? 'No schema information available' : 'Select a table from the list'}
+                    </h3>
+                    <p style={{ margin: 0, opacity: 0.7 }}>
+                      {selectedTable ? 'This table might be empty or have access restrictions' : 'Click on any table to view its schema details'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ 
+            marginTop: '16px',
+            padding: '16px', 
+            backgroundColor: '#ffebee', 
+            color: '#c62828', 
+            borderRadius: '8px',
+            border: '1px solid #ffcdd2'
+          }}>
+            ❌ <strong>Error:</strong> {error}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

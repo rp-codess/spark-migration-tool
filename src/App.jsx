@@ -1,25 +1,37 @@
 import React, { useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import ConnectionSetup from './components/ConnectionSetup'
-import DatabaseExplorer from './components/DatabaseExplorer'
-import TableMapping from './components/TableMapping'
-import TransferMonitor from './components/TransferMonitor'
-import SparkJobManager from './components/SparkJobManager'
+import Router, { Page } from './components/Router'
+import ConnectionPage from './components/ConnectionPage'
+import DatabaseDashboard from './components/DatabaseDashboard'
 
 function App() {
-  const [connected, setConnected] = useState(false)
+  const [currentPage, setCurrentPage] = useState('connection')
+  const [dbConfig, setDbConfig] = useState(null)
+
+  const handleConnect = (config) => {
+    setDbConfig(config)
+    setCurrentPage('dashboard')
+  }
+
+  const handleDisconnect = async () => {
+    try {
+      await window.electronAPI.disconnectDatabase()
+    } catch (error) {
+      console.error('Disconnect error:', error)
+    }
+    setDbConfig(null)
+    setCurrentPage('connection')
+  }
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1>Spark Migration Tool</h1>
-      <div style={{ display: 'grid', gap: '20px' }}>
-        <ConnectionSetup onConnectionChange={setConnected} />
-        <DatabaseExplorer connected={connected} />
-        <TableMapping />
-        <TransferMonitor />
-        <SparkJobManager />
-      </div>
-    </div>
+    <Router currentPage={currentPage}>
+      <Page name="connection">
+        <ConnectionPage onConnect={handleConnect} />
+      </Page>
+      <Page name="dashboard">
+        <DatabaseDashboard config={dbConfig} onDisconnect={handleDisconnect} />
+      </Page>
+    </Router>
   )
 }
 
