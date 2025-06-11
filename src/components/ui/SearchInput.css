@@ -1,0 +1,114 @@
+.search-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.search-input-container:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-tertiary);
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.search-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  padding-left: 36px;
+  padding-right: 36px;
+}
+
+.search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.search-clear:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.search-clear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Size variants */
+.search-sm {
+  height: 32px;
+}
+
+.search-sm .search-input {
+  font-size: 12px;
+  padding-left: 32px;
+  padding-right: 32px;
+}
+
+.search-sm .search-icon {
+  left: 10px;
+  font-size: 12px;
+}
+
+.search-md {
+  height: 40px;
+}
+
+.search-md .search-input {
+  font-size: 14px;
+}
+
+.search-lg {
+  height: 48px;
+}
+
+.search-lg .search-input {
+  font-size: 16px;
+  padding-left: 40px;
+  padding-right: 40px;
+}
+
+.search-lg .search-icon {
+  left: 14px;
+  font-size: 16px;
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .search-input-container {
+  background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .search-input-container:focus-within {
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}

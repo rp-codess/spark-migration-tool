@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Button from './ui/Button'
 import ThemeToggle from './ui/ThemeToggle'
+import SearchInput from './ui/SearchInput'
+import './DatabaseDashboard.css'
 
 export default function DatabaseDashboard({ config, onDisconnect }) {
   const [tables, setTables] = useState([])
@@ -12,6 +14,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 })
   const [showDownloadOptions, setShowDownloadOptions] = useState(false)
   const [downloadCancelled, setDownloadCancelled] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
   
   // Use ref to track cancellation immediately
   const cancelledRef = useRef(false)
@@ -77,6 +80,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
 
   const downloadAllSchemasSingle = async () => {
     console.log('Starting single file download')
+    setShowDownloadOptions(false) // Close dropdown immediately
     setDownloading(true)
     setDownloadCancelled(false)
     cancelledRef.current = false
@@ -164,6 +168,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
 
   const downloadAllSchemasIndividual = async () => {
     console.log('Starting individual files download')
+    setShowDownloadOptions(false) // Close dropdown immediately
     setDownloading(true)
     setDownloadCancelled(false)
     cancelledRef.current = false
@@ -288,101 +293,91 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     }
   }
 
-  const headerStyles = {
-    background: 'var(--gradient-primary)',
-    color: 'white',
-    padding: '20px',
-    boxShadow: 'var(--shadow-lg)',
-    position: 'sticky',
-    top: 0,
-    zIndex: 100
+  // Filter tables based on search term
+  const filteredTables = tables.filter(table => {
+    if (!searchTerm) return true
+    const searchLower = searchTerm.toLowerCase()
+    return (
+      table.name.toLowerCase().includes(searchLower) ||
+      table.schema.toLowerCase().includes(searchLower)
+    )
+  })
+
+  // Highlight search terms in text
+  const highlightText = (text, searchTerm) => {
+    if (!searchTerm) return text
+    
+    const regex = new RegExp(`(${searchTerm})`, 'gi')
+    const parts = text.split(regex)
+    
+    return parts.map((part, index) => 
+      regex.test(part) ? (
+        <span key={index} className="highlight">{part}</span>
+      ) : (
+        part
+      )
+    )
   }
 
-  const cardStyles = {
-    background: 'var(--bg-primary)',
-    borderRadius: '12px',
-    boxShadow: 'var(--shadow-md)',
-    overflow: 'hidden',
-    border: '1px solid var(--border-color)'
+  const handleSearchClear = () => {
+    setSearchTerm('')
+  }
+
+  const handleSingleFileDownload = () => {
+    console.log('=== SINGLE FILE DOWNLOAD TRIGGERED ===')
+    console.log('Tables count:', tables.length)
+    console.log('Config:', config)
+    
+    // Immediate call without timeout to test
+    downloadAllSchemasSingle()
+  }
+
+  const handleIndividualFilesDownload = () => {
+    console.log('=== INDIVIDUAL FILES DOWNLOAD TRIGGERED ===')
+    console.log('Tables count:', tables.length)
+    console.log('Config:', config)
+    
+    // Immediate call without timeout to test
+    downloadAllSchemasIndividual()
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-secondary)' }} className="animate-fadeIn">
+    <div className="database-dashboard animate-fadeIn">
       {/* Header - Now Sticky */}
-      <div style={headerStyles} className="animate-slideInDown">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1200px', margin: '0 auto' }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div className="dashboard-header animate-slideInDown">
+        <div className="header-content">
+          <div className="header-info">
+            <h1 className="header-title">
               📊 Database Explorer
             </h1>
-            <p style={{ margin: '4px 0 0 0', opacity: 0.9 }}>
+            <p className="header-subtitle">
               {config.type.toUpperCase()} • {config.host} • {config.database}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div className="header-actions">
             <ThemeToggle />
-            <div style={{ position: 'relative' }}>
-              <Button
-                onClick={() => setShowDownloadOptions(!showDownloadOptions)}
-                disabled={downloading || tables.length === 0}
-                variant="success"
-                icon={downloading ? '⏳' : '📥'}
-              >
-                Download All Schemas ▼
-              </Button>
-              
-              {/* Download options dropdown */}
-              {showDownloadOptions && !downloading && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  backgroundColor: 'var(--bg-primary)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '6px',
-                  boxShadow: 'var(--shadow-lg)',
-                  zIndex: 1000,
-                  minWidth: '250px',
-                  marginTop: '4px'
-                }} className="animate-scaleIn">
-                  <button
-                    onClick={downloadAllSchemasSingle}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      color: 'var(--text-primary)',
-                      borderBottom: '1px solid var(--border-color)'
-                    }}
-                  >
-                    📄 Single JSON File
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      All schemas in one file
-                    </div>
-                  </button>
-                  <button
-                    onClick={downloadAllSchemasIndividual}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      color: 'var(--text-primary)'
-                    }}
-                  >
-                    📁 Individual Files
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      Separate file for each table
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
+            
+            {/* Replace dropdown with two separate buttons */}
+            <Button
+              onClick={handleSingleFileDownload}
+              disabled={downloading || tables.length === 0}
+              variant="success"
+              size="sm"
+              icon={downloading ? '⏳' : '📄'}
+            >
+              Single File
+            </Button>
+            
+            <Button
+              onClick={handleIndividualFilesDownload}
+              disabled={downloading || tables.length === 0}
+              variant="success"
+              size="sm"
+              icon={downloading ? '⏳' : '📁'}
+            >
+              Individual Files
+            </Button>
+            
             <Button
               onClick={onDisconnect}
               variant="danger"
@@ -395,18 +390,13 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
         
         {/* Progress Bar */}
         {downloading && (
-          <div style={{ maxWidth: '1200px', margin: '16px auto 0 auto' }} className="animate-slideInDown">
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '8px'
-            }}>
-              <span style={{ fontSize: '14px', opacity: 0.9 }}>
+          <div className="progress-section animate-slideInDown">
+            <div className="progress-header">
+              <span className="progress-text">
                 {downloadCancelled ? 'Cancelling...' : `Downloading schemas... (${downloadProgress.current}/${downloadProgress.total})`}
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '14px', opacity: 0.9 }}>
+              <div className="progress-actions">
+                <span className="progress-text">
                   {downloadProgress.total > 0 ? Math.round((downloadProgress.current / downloadProgress.total) * 100) : 0}%
                 </span>
                 <Button
@@ -421,163 +411,126 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                 </Button>
               </div>
             </div>
-            <div style={{
-              width: '100%',
-              height: '8px',
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              borderRadius: '4px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                height: '100%',
-                backgroundColor: downloadCancelled ? '#ffc107' : '#28a745',
-                width: downloadProgress.total > 0 ? `${(downloadProgress.current / downloadProgress.total) * 100}%` : '0%',
-                transition: 'width 0.3s ease'
-              }} />
+            <div className="progress-bar">
+              <div 
+                className={`progress-fill ${downloadCancelled ? 'warning' : 'success'}`}
+                style={{ 
+                  width: downloadProgress.total > 0 ? `${(downloadProgress.current / downloadProgress.total) * 100}%` : '0%'
+                }}
+              />
             </div>
           </div>
         )}
       </div>
 
-      {/* Main Content - Now scrollable below sticky header */}
-      <div style={{ 
-        maxWidth: '1200px', 
-        margin: '0 auto', 
-        padding: '20px',
-        minHeight: 'calc(100vh - 140px)' // Adjust for header height
-      }}>
+      {/* Main Content */}
+      <div className="main-content">
         {/* Stats Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-          <div style={{
-            ...cardStyles,
-            padding: '20px',
-            textAlign: 'center'
-          }} className="animate-scaleIn">
-            <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--color-primary)' }}>{tables.length}</div>
-            <div style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>Total Tables</div>
+        <div className="stats-grid">
+          <div className="stat-card animate-scaleIn">
+            <div className="stat-number primary">{tables.length}</div>
+            <div className="stat-label">Total Tables</div>
           </div>
-          <div style={{
-            ...cardStyles,
-            padding: '20px',
-            textAlign: 'center'
-          }} className="animate-scaleIn">
-            <div style={{ fontSize: '32px', fontWeight: 'bold', color: 'var(--color-success)' }}>
+          <div className="stat-card animate-scaleIn">
+            <div className="stat-number success">
               {selectedTable ? tableSchema.length : 0}
             </div>
-            <div style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>Columns Selected</div>
+            <div className="stat-label">Columns Selected</div>
           </div>
         </div>
 
         {/* Main Explorer */}
-        <div style={cardStyles}>
-          <div style={{ display: 'flex', height: '600px' }}>
+        <div className="explorer-card">
+          <div className="explorer-layout">
             {/* Tables Sidebar */}
-            <div style={{ width: '350px', borderRight: `1px solid var(--border-color)` }}>
-              <div style={{
-                padding: '16px',
-                backgroundColor: 'var(--bg-secondary)',
-                borderBottom: `1px solid var(--border-color)`,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-primary)' }}>Tables ({tables.length})</h3>
-                <button 
-                  onClick={loadTables} 
-                  disabled={loading}
-                  style={{ 
-                    padding: '6px 12px', 
-                    fontSize: '12px',
-                    backgroundColor: 'var(--bg-tertiary)',
-                    color: 'var(--text-primary)',
-                    border: `1px solid var(--border-color)`,
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = 'var(--bg-hover)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = 'var(--bg-tertiary)'
-                  }}
-                >
-                  {loading ? '🔄' : '↻'} Refresh
-                </button>
+            <div className="tables-sidebar">
+              <div className="sidebar-header">
+                <div className="sidebar-header-top">
+                  <h3 className="sidebar-title">
+                    Tables ({filteredTables.length}{searchTerm && ` of ${tables.length}`})
+                  </h3>
+                  <button 
+                    className="refresh-button"
+                    onClick={loadTables} 
+                    disabled={loading}
+                  >
+                    {loading ? '🔄' : '↻'} Refresh
+                  </button>
+                </div>
+                
+                <div className="search-section">
+                  <SearchInput
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    onClear={handleSearchClear}
+                    placeholder="Search tables and schemas..."
+                    size="sm"
+                  />
+                  {searchTerm && (
+                    <div className="search-results-info">
+                      {filteredTables.length > 0 
+                        ? `Found ${filteredTables.length} table${filteredTables.length !== 1 ? 's' : ''}`
+                        : 'No tables found'
+                      }
+                    </div>
+                  )}
+                </div>
               </div>
               
-              <div style={{ height: '532px', overflowY: 'auto', backgroundColor: 'var(--bg-primary)' }}>
+              <div className="tables-list">
                 {loading && tables.length === 0 ? (
-                  <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+                  <div className="loading-state">
+                    <div className="loading-icon">⏳</div>
                     Loading tables...
                   </div>
-                ) : (
-                  <div style={{ padding: '8px' }}>
-                    {tables.map((table, index) => (
-                      <div 
-                        key={index}
-                        onClick={() => loadTableSchema(table)}
-                        style={{ 
-                          padding: '12px',
-                          cursor: 'pointer',
-                          backgroundColor: selectedTable?.name === table.name ? 'var(--color-primary)' : 'transparent',
-                          borderRadius: '8px',
-                          marginBottom: '4px',
-                          border: selectedTable?.name === table.name ? `2px solid var(--color-primary)` : '2px solid transparent',
-                          transition: 'all 0.2s ease',
-                          color: selectedTable?.name === table.name ? 'white' : 'var(--text-primary)'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (selectedTable?.name !== table.name) {
-                            e.currentTarget.style.backgroundColor = 'var(--bg-hover)'
-                            e.currentTarget.style.color = 'var(--text-primary)'
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (selectedTable?.name !== table.name) {
-                            e.currentTarget.style.backgroundColor = 'transparent'
-                            e.currentTarget.style.color = 'var(--text-primary)'
-                          }
-                        }}
-                      >
-                        <div style={{ 
-                          fontWeight: '600', 
-                          marginBottom: '4px', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '8px',
-                          color: 'inherit'
-                        }}>
-                          📊 {table.name}
-                        </div>
-                        <div style={{ 
-                          fontSize: '12px', 
-                          color: selectedTable?.name === table.name ? 'rgba(255,255,255,0.8)' : 'var(--text-tertiary)', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '4px' 
-                        }}>
-                          🏗️ {table.schema}
-                        </div>
+                ) : filteredTables.length > 0 ? (
+                  filteredTables.map((table, index) => (
+                    <div 
+                      key={index}
+                      className={`table-item ${selectedTable?.name === table.name ? 'selected' : ''}`}
+                      onClick={() => loadTableSchema(table)}
+                    >
+                      <div className="table-name">
+                        📊 {highlightText(table.name, searchTerm)}
                       </div>
-                    ))}
+                      <div className="table-schema">
+                        🏗️ {highlightText(table.schema, searchTerm)}
+                      </div>
+                    </div>
+                  ))
+                ) : searchTerm ? (
+                  <div className="no-results">
+                    <div className="no-results-icon">🔍</div>
+                    <div>No tables found matching "{searchTerm}"</div>
+                    <button 
+                      onClick={handleSearchClear}
+                      style={{
+                        marginTop: '12px',
+                        padding: '6px 12px',
+                        background: 'var(--color-primary)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Clear Search
+                    </button>
+                  </div>
+                ) : (
+                  <div className="loading-state">
+                    <div className="loading-icon">📊</div>
+                    No tables available
                   </div>
                 )}
               </div>
             </div>
 
             {/* Schema Details */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <div style={{
-                padding: '16px',
-                backgroundColor: 'var(--bg-secondary)',
-                borderBottom: `1px solid var(--border-color)`,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <h3 style={{ margin: 0, fontSize: '16px', color: 'var(--text-primary)' }}>
+            <div className="schema-details">
+              <div className="schema-header">
+                <h3 className="schema-title">
                   {selectedTable ? `${selectedTable.schema}.${selectedTable.name}` : 'Select a table to view schema'}
                 </h3>
                 {selectedTable && tableSchema.length > 0 && (
@@ -592,80 +545,40 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                 )}
               </div>
               
-              <div style={{ flex: 1, overflowY: 'auto', backgroundColor: 'var(--bg-primary)' }}>
+              <div className="schema-content">
                 {loading && selectedTable ? (
-                  <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+                  <div className="loading-state">
+                    <div className="loading-icon">⏳</div>
                     Loading schema...
                   </div>
                 ) : selectedTable && tableSchema.length > 0 ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table className="schema-table">
                     <thead>
-                      <tr style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                        <th style={{ 
-                          padding: '12px', 
-                          textAlign: 'left', 
-                          borderBottom: `2px solid var(--border-color)`, 
-                          fontWeight: '600',
-                          color: 'var(--text-primary)'
-                        }}>Column</th>
-                        <th style={{ 
-                          padding: '12px', 
-                          textAlign: 'left', 
-                          borderBottom: `2px solid var(--border-color)`, 
-                          fontWeight: '600',
-                          color: 'var(--text-primary)'
-                        }}>Type</th>
-                        <th style={{ 
-                          padding: '12px', 
-                          textAlign: 'center', 
-                          borderBottom: `2px solid var(--border-color)`, 
-                          fontWeight: '600',
-                          color: 'var(--text-primary)'
-                        }}>Nullable</th>
-                        <th style={{ 
-                          padding: '12px', 
-                          textAlign: 'left', 
-                          borderBottom: `2px solid var(--border-color)`, 
-                          fontWeight: '600',
-                          color: 'var(--text-primary)'
-                        }}>Default</th>
+                      <tr>
+                        <th>Column</th>
+                        <th>Type</th>
+                        <th className="center">Nullable</th>
+                        <th>Default</th>
                       </tr>
                     </thead>
                     <tbody>
                       {tableSchema.map((column, index) => (
-                        <tr key={index} style={{ 
-                          borderBottom: `1px solid var(--border-color)`,
-                          backgroundColor: index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)'
-                        }}>
-                          <td style={{ 
-                            padding: '12px', 
-                            fontWeight: '500',
-                            color: 'var(--text-primary)'
-                          }}>
+                        <tr key={index}>
+                          <td className="column-name">
                             {column.COLUMN_NAME || column.column_name}
                           </td>
-                          <td style={{ 
-                            padding: '12px', 
-                            fontFamily: 'monospace', 
-                            backgroundColor: 'var(--bg-tertiary)',
-                            color: 'var(--text-primary)'
-                          }}>
+                          <td className="column-type">
                             {column.DATA_TYPE || column.data_type}
                             {(column.CHARACTER_MAXIMUM_LENGTH || column.character_maximum_length) && 
                               `(${column.CHARACTER_MAXIMUM_LENGTH || column.character_maximum_length})`}
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                          <td className="column-nullable">
                             {(column.IS_NULLABLE || column.is_nullable) === 'YES' ? 
-                              <span style={{ color: 'var(--color-success)', fontSize: '16px' }}>✓</span> : 
-                              <span style={{ color: 'var(--color-danger)', fontSize: '16px' }}>✗</span>
+                              <span className="nullable-yes">✓</span> : 
+                              <span className="nullable-no">✗</span>
                             }
                           </td>
-                          <td style={{ 
-                            padding: '12px', 
-                            fontFamily: 'monospace', 
-                            color: 'var(--text-secondary)'
-                          }}>
+                          <td className="column-default">
                             {column.COLUMN_DEFAULT || column.column_default || '-'}
                           </td>
                         </tr>
@@ -673,21 +586,12 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                     </tbody>
                   </table>
                 ) : (
-                  <div style={{ 
-                    padding: '60px', 
-                    textAlign: 'center', 
-                    color: 'var(--text-secondary)',
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                  }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
-                    <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>
+                  <div className="empty-state">
+                    <div className="empty-icon">📋</div>
+                    <h3 className="empty-title">
                       {selectedTable ? 'No schema information available' : 'Select a table from the list'}
                     </h3>
-                    <p style={{ margin: 0, opacity: 0.7, color: 'var(--text-secondary)' }}>
+                    <p className="empty-description">
                       {selectedTable ? 'This table might be empty or have access restrictions' : 'Click on any table to view its schema details'}
                     </p>
                   </div>
@@ -698,14 +602,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
         </div>
 
         {error && (
-          <div style={{ 
-            marginTop: '16px',
-            padding: '16px', 
-            backgroundColor: 'var(--color-danger)',
-            color: 'white', 
-            borderRadius: '8px',
-            opacity: 0.9
-          }}>
+          <div className="error-message">
             ❌ <strong>Error:</strong> {error}
           </div>
         )}
@@ -714,14 +611,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
       {/* Click outside to close dropdown */}
       {showDownloadOptions && (
         <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 999
-          }}
+          className="dropdown-backdrop"
           onClick={() => setShowDownloadOptions(false)}
         />
       )}
