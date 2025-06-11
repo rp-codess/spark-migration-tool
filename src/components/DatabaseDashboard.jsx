@@ -292,7 +292,10 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     background: 'var(--gradient-primary)',
     color: 'white',
     padding: '20px',
-    boxShadow: 'var(--shadow-lg)'
+    boxShadow: 'var(--shadow-lg)',
+    position: 'sticky',
+    top: 0,
+    zIndex: 100
   }
 
   const cardStyles = {
@@ -305,7 +308,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-secondary)' }} className="animate-fadeIn">
-      {/* Header */}
+      {/* Header - Now Sticky */}
       <div style={headerStyles} className="animate-slideInDown">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1200px', margin: '0 auto' }}>
           <div>
@@ -436,8 +439,13 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
         )}
       </div>
 
-      {/* Main Content */}
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
+      {/* Main Content - Now scrollable below sticky header */}
+      <div style={{ 
+        maxWidth: '1200px', 
+        margin: '0 auto', 
+        padding: '20px',
+        minHeight: 'calc(100vh - 140px)' // Adjust for header height
+      }}>
         {/* Stats Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
           <div style={{
