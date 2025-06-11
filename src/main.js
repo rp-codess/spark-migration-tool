@@ -78,12 +78,56 @@ ipcMain.handle('save-schema-to-file', async (event, data, filename) => {
   try {
     // Ensure Documents directory exists
     const documentsPath = path.join(os.homedir(), 'Documents')
+    console.log('Documents path:', documentsPath)
+    
+    // Create SparkMigrationTool subdirectory
+    const toolDirectory = path.join(documentsPath, 'SparkMigrationTool')
+    console.log('Tool directory:', toolDirectory)
+    await fs.promises.mkdir(toolDirectory, { recursive: true })
+    
+    // Handle folder structure in filename
+    const fullFilePath = path.join(toolDirectory, filename)
+    const fileDirectory = path.dirname(fullFilePath)
+    
+    console.log('Full file path:', fullFilePath)
+    console.log('File directory:', fileDirectory)
+    
+    // Create subdirectories if they don't exist
+    if (fileDirectory !== toolDirectory) {
+      console.log('Creating subdirectory:', fileDirectory)
+      await fs.promises.mkdir(fileDirectory, { recursive: true })
+    }
+    
+    console.log('Writing file to:', fullFilePath)
+    await fs.promises.writeFile(fullFilePath, JSON.stringify(data, null, 2), 'utf8')
+    console.log('File saved successfully')
+    
+    // Verify file exists
+    const fileExists = await fs.promises.access(fullFilePath).then(() => true).catch(() => false)
+    console.log('File exists after write:', fileExists)
+    
+    return { success: true, filePath: fullFilePath }
+  } catch (error) {
+    console.error('Error saving file:', error)
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('save-schema-to-folder', async (event, data, folderName, filename) => {
+  console.log('save-schema-to-folder handler called with folder:', folderName, 'filename:', filename)
+  try {
+    // Ensure Documents directory exists
+    const documentsPath = path.join(os.homedir(), 'Documents')
     
     // Create SparkMigrationTool subdirectory
     const toolDirectory = path.join(documentsPath, 'SparkMigrationTool')
     await fs.promises.mkdir(toolDirectory, { recursive: true })
     
-    const filePath = path.join(toolDirectory, filename)
+    // Create specific folder for this download
+    const schemaFolderPath = path.join(toolDirectory, folderName)
+    await fs.promises.mkdir(schemaFolderPath, { recursive: true })
+    
+    const filePath = path.join(schemaFolderPath, filename)
     console.log('Saving file to:', filePath)
     
     await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')

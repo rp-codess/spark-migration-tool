@@ -7,6 +7,8 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [downloading, setDownloading] = useState(false)
+  const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 })
+  const [showDownloadOptions, setShowDownloadOptions] = useState(false)
 
   useEffect(() => {
     loadTables()
@@ -47,12 +49,17 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     }
   }
 
-  const downloadAllSchemas = async () => {
+  const downloadAllSchemasSingle = async () => {
     setDownloading(true)
+    setDownloadProgress({ current: 0, total: tables.length })
+    
     try {
       const allSchemas = {}
       
-      for (const table of tables) {
+      for (let i = 0; i < tables.length; i++) {
+        const table = tables[i]
+        setDownloadProgress({ current: i + 1, total: tables.length })
+        
         const result = await window.electronAPI.getTableSchema(table.name, table.schema)
         if (result.success) {
           allSchemas[`${table.schema}.${table.name}`] = {
@@ -68,15 +75,90 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
         host: config.host,
         type: config.type,
         exportDate: new Date().toISOString(),
+        totalTables: tables.length,
         tables: allSchemas
       }
 
-      await window.electronAPI.saveSchemaToFile(schemaData, `${config.database}_all_schemas.json`)
-      alert('All schemas downloaded successfully!')
+      const result = await window.electronAPI.saveSchemaToFile(schemaData, `${config.database}_all_schemas.json`)
+      if (result.success) {
+        alert(`All schemas downloaded successfully!\nSaved to: ${result.filePath}`)
+      } else {
+        setError(result.message)
+      }
     } catch (err) {
       setError(err.message)
     } finally {
       setDownloading(false)
+      setDownloadProgress({ current: 0, total: 0 })
+      setShowDownloadOptions(false)
+    }
+  }
+
+  const downloadAllSchemasIndividual = async () => {
+    setDownloading(true)
+    setDownloadProgress({ current: 0, total: tables.length })
+    
+    try {
+      const folderData = {
+        database: config.database,
+        host: config.host,
+        type: config.type,
+        exportDate: new Date().toISOString(),
+        totalTables: tables.length
+      }
+
+      let successCount = 0
+      let errors = []
+
+      for (let i = 0; i < tables.length; i++) {
+        const table = tables[i]
+        setDownloadProgress({ current: i + 1, total: tables.length })
+        
+        try {
+          const result = await window.electronAPI.getTableSchema(table.name, table.schema)
+          if (result.success) {
+            const tableSchemaData = {
+              ...folderData,
+              table: {
+                name: table.name,
+                schema: table.schema,
+                columns: result.schema
+              }
+            }
+
+            // Use existing saveSchemaToFile with folder path in filename
+            const folderPath = `${config.database}_schemas/${table.schema}_${table.name}.json`
+            const saveResult = await window.electronAPI.saveSchemaToFile(tableSchemaData, folderPath)
+            
+            if (saveResult.success) {
+              console.log(`Successfully saved: ${saveResult.filePath}`)
+              successCount++
+            } else {
+              console.error(`Failed to save ${table.name}:`, saveResult.message)
+              errors.push(`${table.name}: ${saveResult.message}`)
+            }
+          } else {
+            console.error(`Failed to get schema for ${table.name}:`, result.message)
+            errors.push(`${table.name}: ${result.message}`)
+          }
+        } catch (err) {
+          console.error(`Error processing ${table.name}:`, err)
+          errors.push(`${table.name}: ${err.message}`)
+        }
+      }
+
+      if (errors.length > 0) {
+        alert(`Download completed with issues:\nSuccessful: ${successCount}/${tables.length}\nErrors: ${errors.length}\n\nFirst few errors:\n${errors.slice(0, 3).join('\n')}`)
+      } else {
+        alert(`All ${successCount} schemas downloaded successfully!\nSaved to: Documents/SparkMigrationTool/${config.database}_schemas/`)
+      }
+    } catch (err) {
+      console.error('Download error:', err)
+      setError(err.message)
+    } finally {
+      setDownloading(false)
+      setDownloadProgress({ current: 0, total: 0 })
+      setShowDownloadOptions(false)
     }
   }
 
@@ -119,24 +201,81 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
               {config.type.toUpperCase()} • {config.host} • {config.database}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={downloadAllSchemas}
-              disabled={downloading || tables.length === 0}
-              style={{
-                padding: '10px 16px',
-                backgroundColor: downloading ? '#ccc' : '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: downloading ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              {downloading ? '⏳' : '📥'} Download All Schemas
-            </button>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowDownloadOptions(!showDownloadOptions)}
+                disabled={downloading || tables.length === 0}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: downloading ? '#ccc' : '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: downloading ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                {downloading ? '⏳' : '📥'} Download All Schemas ▼
+              </button>
+              
+              {showDownloadOptions && !downloading && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  backgroundColor: 'white',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  zIndex: 1000,
+                  minWidth: '250px',
+                  marginTop: '4px'
+                }}>
+                  <button
+                    onClick={downloadAllSchemasSingle}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      color: '#333',
+                      borderBottom: '1px solid #eee'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                  >
+                    📄 Single JSON File
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                      All schemas in one file
+                    </div>
+                  </button>
+                  <button
+                    onClick={downloadAllSchemasIndividual}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      color: '#333'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                  >
+                    📁 Individual Files
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                      Separate file for each table
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               onClick={onDisconnect}
               style={{
@@ -152,6 +291,39 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
             </button>
           </div>
         </div>
+        
+        {/* Progress Bar */}
+        {downloading && (
+          <div style={{ maxWidth: '1200px', margin: '16px auto 0 auto' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '8px'
+            }}>
+              <span style={{ fontSize: '14px', opacity: 0.9 }}>
+                Downloading schemas... ({downloadProgress.current}/{downloadProgress.total})
+              </span>
+              <span style={{ fontSize: '14px', opacity: 0.9 }}>
+                {downloadProgress.total > 0 ? Math.round((downloadProgress.current / downloadProgress.total) * 100) : 0}%
+              </span>
+            </div>
+            <div style={{
+              width: '100%',
+              height: '8px',
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              borderRadius: '4px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                backgroundColor: '#28a745',
+                width: downloadProgress.total > 0 ? `${(downloadProgress.current / downloadProgress.total) * 100}%` : '0%',
+                transition: 'width 0.3s ease'
+              }} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
@@ -180,6 +352,21 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
             </div>
             <div style={{ color: '#666', marginTop: '4px' }}>Columns Selected</div>
           </div>
+          {downloading && (
+            <div style={{
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              color: 'white',
+              padding: '20px',
+              borderRadius: '12px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '32px', fontWeight: 'bold' }}>
+                {downloadProgress.current}
+              </div>
+              <div style={{ marginTop: '4px', opacity: 0.9 }}>Downloaded</div>
+            </div>
+          )}
         </div>
 
         {/* Main Explorer */}
@@ -375,6 +562,21 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
           </div>
         )}
       </div>
+
+      {/* Click outside to close dropdown */}
+      {showDownloadOptions && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 999
+          }}
+          onClick={() => setShowDownloadOptions(false)}
+        />
+      )}
     </div>
   )
 }
