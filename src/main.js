@@ -1,5 +1,6 @@
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, ipcMain } = require('electron')
 const path = require('path')
+const DatabaseManager = require('./database/DatabaseManager')
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -26,6 +27,42 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
 }
+
+// IPC Handlers
+ipcMain.handle('connect-database', async (event, config) => {
+  try {
+    return await DatabaseManager.connect(config)
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('get-tables', async (event) => {
+  try {
+    const tables = await DatabaseManager.getTables()
+    return { success: true, tables }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('get-table-schema', async (event, tableName, schemaName) => {
+  try {
+    const schema = await DatabaseManager.getTableSchema(tableName, schemaName)
+    return { success: true, schema }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('disconnect-database', async (event) => {
+  try {
+    DatabaseManager.disconnect()
+    return { success: true }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
 
 app.whenReady().then(createWindow)
 
