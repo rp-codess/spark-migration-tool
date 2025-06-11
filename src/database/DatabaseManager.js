@@ -422,31 +422,20 @@ class DatabaseManager {
     }
 
     try {
+      console.log('Getting table schema for SQL generation...')
       const schema = await this.getTableSchema(tableName, schemaName)
-      const constraints = await this.getTableConstraints(tableName, schemaName)
-      const foreignKeys = await this.getTableForeignKeys(tableName, schemaName)
       
+      console.log('Generating CREATE TABLE SQL...')
       let sql = this.generateCreateTableSQL(tableName, schemaName, schema)
       
-      // Add constraints that aren't already in the CREATE TABLE
-      const nonPrimaryConstraints = constraints.filter(c => 
-        (c.CONSTRAINT_TYPE || c.constraint_type) !== 'PRIMARY KEY'
-      )
-      if (nonPrimaryConstraints.length > 0) {
-        sql += '\n' + this.generateConstraintsSQL(tableName, schemaName, nonPrimaryConstraints)
-      }
-      
-      // Add foreign keys
-      if (foreignKeys.length > 0) {
-        sql += '\n' + this.generateForeignKeysSQL(tableName, schemaName, foreignKeys)
-      }
-      
       // Add DEFAULT constraints as separate ALTER statements
+      console.log('Adding default constraints...')
       const defaultConstraints = this.generateDefaultConstraints(tableName, schemaName, schema)
       if (defaultConstraints) {
-        sql += '\n' + defaultConstraints
+        sql += defaultConstraints
       }
       
+      console.log('SQL generation completed successfully')
       return sql
     } catch (error) {
       console.error('Error getting table SQL:', error)
@@ -468,7 +457,7 @@ class DatabaseManager {
         if (cleanDefault.startsWith('(') && cleanDefault.endsWith(')')) {
           cleanDefault = cleanDefault.slice(1, -1)
         }
-        sql += `ALTER TABLE [${schemaName}].[${tableName}] ADD  DEFAULT ${cleanDefault} FOR [${columnName}]\n`
+        sql += `ALTER TABLE [${schemaName}].[${tableName}] ADD  DEFAULT (${cleanDefault}) FOR [${columnName}]\n`
         sql += `GO\n\n`
       }
     })
@@ -551,7 +540,7 @@ class DatabaseManager {
       sql += primaryKeyColumns.map(col => `\t[${col}] ASC`).join(',\n')
       sql += `\n)WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]`
     }
-
+    
     // Check if table has TEXT/IMAGE columns
     const hasTextImage = schema.some(col => {
       const dataType = (col.DATA_TYPE || col.data_type).toUpperCase()
