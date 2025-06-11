@@ -85,18 +85,18 @@ ipcMain.handle('save-schema-to-file', async (event, data, filename) => {
     console.log('Tool directory:', toolDirectory)
     await fs.promises.mkdir(toolDirectory, { recursive: true })
     
-    // Handle folder structure in filename
-    const fullFilePath = path.join(toolDirectory, filename)
+    // Handle folder structure in filename - normalize path separators
+    const normalizedFilename = filename.replace(/\//g, path.sep)
+    const fullFilePath = path.join(toolDirectory, normalizedFilename)
     const fileDirectory = path.dirname(fullFilePath)
     
+    console.log('Normalized filename:', normalizedFilename)
     console.log('Full file path:', fullFilePath)
     console.log('File directory:', fileDirectory)
     
-    // Create subdirectories if they don't exist
-    if (fileDirectory !== toolDirectory) {
-      console.log('Creating subdirectory:', fileDirectory)
-      await fs.promises.mkdir(fileDirectory, { recursive: true })
-    }
+    // Always create the directory structure
+    console.log('Creating directory structure:', fileDirectory)
+    await fs.promises.mkdir(fileDirectory, { recursive: true })
     
     console.log('Writing file to:', fullFilePath)
     await fs.promises.writeFile(fullFilePath, JSON.stringify(data, null, 2), 'utf8')

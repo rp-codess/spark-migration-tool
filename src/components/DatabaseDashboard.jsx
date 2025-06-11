@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 
 export default function DatabaseDashboard({ config, onDisconnect }) {
   const [tables, setTables] = useState([])
@@ -9,6 +9,11 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
   const [downloading, setDownloading] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 })
   const [showDownloadOptions, setShowDownloadOptions] = useState(false)
+  const [downloadCancelled, setDownloadCancelled] = useState(false)
+  
+  // Use ref to track cancellation immediately
+  const cancelledRef = useRef(false)
+  const abortControllerRef = useRef(null)
 
   useEffect(() => {
     loadTables()
@@ -49,53 +54,118 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     }
   }
 
+  const cancelDownload = () => {
+    console.log('Cancel download clicked - immediate action')
+    setDownloadCancelled(true)
+    cancelledRef.current = true
+    
+    // Abort any ongoing requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+    
+    // Force reset the download state
+    setTimeout(() => {
+      setDownloading(false)
+      setDownloadProgress({ current: 0, total: 0 })
+      setShowDownloadOptions(false)
+      console.log('Download state reset')
+    }, 100)
+  }
+
   const downloadAllSchemasSingle = async () => {
+    console.log('Starting single file download')
     setDownloading(true)
+    setDownloadCancelled(false)
+    cancelledRef.current = false
+    abortControllerRef.current = new AbortController()
     setDownloadProgress({ current: 0, total: tables.length })
     
     try {
       const allSchemas = {}
       
       for (let i = 0; i < tables.length; i++) {
+        // Multiple cancellation checks
+        if (cancelledRef.current || abortControllerRef.current.signal.aborted) {
+          console.log('Download cancelled at table', i)
+          alert('Download cancelled by user')
+          return
+        }
+
         const table = tables[i]
+        console.log(`Processing table ${i + 1}/${tables.length}: ${table.name}`)
         setDownloadProgress({ current: i + 1, total: tables.length })
         
-        const result = await window.electronAPI.getTableSchema(table.name, table.schema)
-        if (result.success) {
-          allSchemas[`${table.schema}.${table.name}`] = {
-            tableName: table.name,
-            schema: table.schema,
-            columns: result.schema
+        // Add a small delay to allow UI updates and cancellation checks
+        await new Promise(resolve => setTimeout(resolve, 10))
+        
+        if (cancelledRef.current) {
+          console.log('Download cancelled during delay')
+          alert('Download cancelled by user')
+          return
+        }
+
+        try {
+          const result = await window.electronAPI.getTableSchema(table.name, table.schema)
+          
+          if (cancelledRef.current) {
+            console.log('Download cancelled after schema fetch')
+            alert('Download cancelled by user')
+            return
           }
+          
+          if (result.success) {
+            allSchemas[`${table.schema}.${table.name}`] = {
+              tableName: table.name,
+              schema: table.schema,
+              columns: result.schema
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching schema for ${table.name}:`, error)
         }
       }
 
-      const schemaData = {
-        database: config.database,
-        host: config.host,
-        type: config.type,
-        exportDate: new Date().toISOString(),
-        totalTables: tables.length,
-        tables: allSchemas
-      }
+      if (!cancelledRef.current) {
+        console.log('Saving combined schema file')
+        const schemaData = {
+          database: config.database,
+          host: config.host,
+          type: config.type,
+          exportDate: new Date().toISOString(),
+          totalTables: tables.length,
+          tables: allSchemas
+        }
 
-      const result = await window.electronAPI.saveSchemaToFile(schemaData, `${config.database}_all_schemas.json`)
-      if (result.success) {
-        alert(`All schemas downloaded successfully!\nSaved to: ${result.filePath}`)
-      } else {
-        setError(result.message)
+        const result = await window.electronAPI.saveSchemaToFile(schemaData, `${config.database}_all_schemas.json`)
+        if (result.success) {
+          alert(`All schemas downloaded successfully!\nSaved to: ${result.filePath}`)
+        } else {
+          setError(result.message)
+        }
       }
     } catch (err) {
-      setError(err.message)
+      if (!cancelledRef.current) {
+        console.error('Download error:', err)
+        setError(err.message)
+      }
     } finally {
+      console.log('Cleaning up download state')
       setDownloading(false)
+      setDownloadCancelled(false)
+      cancelledRef.current = false
+      abortControllerRef.current = null
       setDownloadProgress({ current: 0, total: 0 })
       setShowDownloadOptions(false)
     }
   }
 
   const downloadAllSchemasIndividual = async () => {
+    console.log('Starting individual files download')
     setDownloading(true)
+    setDownloadCancelled(false)
+    cancelledRef.current = false
+    abortControllerRef.current = new AbortController()
     setDownloadProgress({ current: 0, total: tables.length })
     
     try {
@@ -111,11 +181,35 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
       let errors = []
 
       for (let i = 0; i < tables.length; i++) {
+        // Multiple cancellation checks
+        if (cancelledRef.current || abortControllerRef.current.signal.aborted) {
+          console.log('Download cancelled at table', i)
+          alert(`Download cancelled by user.\nDownloaded ${successCount}/${tables.length} files before cancellation.`)
+          return
+        }
+
         const table = tables[i]
+        console.log(`Processing table ${i + 1}/${tables.length}: ${table.name}`)
         setDownloadProgress({ current: i + 1, total: tables.length })
         
+        // Add a small delay to allow UI updates and cancellation checks
+        await new Promise(resolve => setTimeout(resolve, 10))
+        
+        if (cancelledRef.current) {
+          console.log('Download cancelled during delay')
+          alert(`Download cancelled by user.\nDownloaded ${successCount}/${tables.length} files before cancellation.`)
+          return
+        }
+
         try {
           const result = await window.electronAPI.getTableSchema(table.name, table.schema)
+          
+          if (cancelledRef.current) {
+            console.log('Download cancelled after schema fetch')
+            alert(`Download cancelled by user.\nDownloaded ${successCount}/${tables.length} files before cancellation.`)
+            return
+          }
+          
           if (result.success) {
             const tableSchemaData = {
               ...folderData,
@@ -126,7 +220,6 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
               }
             }
 
-            // Use existing saveSchemaToFile with folder path in filename
             const folderPath = `${config.database}_schemas/${table.schema}_${table.name}.json`
             const saveResult = await window.electronAPI.saveSchemaToFile(tableSchemaData, folderPath)
             
@@ -147,16 +240,24 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
         }
       }
 
-      if (errors.length > 0) {
-        alert(`Download completed with issues:\nSuccessful: ${successCount}/${tables.length}\nErrors: ${errors.length}\n\nFirst few errors:\n${errors.slice(0, 3).join('\n')}`)
-      } else {
-        alert(`All ${successCount} schemas downloaded successfully!\nSaved to: Documents/SparkMigrationTool/${config.database}_schemas/`)
+      if (!cancelledRef.current) {
+        if (errors.length > 0) {
+          alert(`Download completed with issues:\nSuccessful: ${successCount}/${tables.length}\nErrors: ${errors.length}\n\nFirst few errors:\n${errors.slice(0, 3).join('\n')}`)
+        } else {
+          alert(`All ${successCount} schemas downloaded successfully!\nSaved to: Documents/SparkMigrationTool/${config.database}_schemas/`)
+        }
       }
     } catch (err) {
-      console.error('Download error:', err)
-      setError(err.message)
+      if (!cancelledRef.current) {
+        console.error('Download error:', err)
+        setError(err.message)
+      }
     } finally {
+      console.log('Cleaning up download state')
       setDownloading(false)
+      setDownloadCancelled(false)
+      cancelledRef.current = false
+      abortControllerRef.current = null
       setDownloadProgress({ current: 0, total: 0 })
       setShowDownloadOptions(false)
     }
@@ -302,11 +403,29 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
               marginBottom: '8px'
             }}>
               <span style={{ fontSize: '14px', opacity: 0.9 }}>
-                Downloading schemas... ({downloadProgress.current}/{downloadProgress.total})
+                {downloadCancelled ? 'Cancelling...' : `Downloading schemas... (${downloadProgress.current}/${downloadProgress.total})`}
               </span>
-              <span style={{ fontSize: '14px', opacity: 0.9 }}>
-                {downloadProgress.total > 0 ? Math.round((downloadProgress.current / downloadProgress.total) * 100) : 0}%
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '14px', opacity: 0.9 }}>
+                  {downloadProgress.total > 0 ? Math.round((downloadProgress.current / downloadProgress.total) * 100) : 0}%
+                </span>
+                <button
+                  onClick={cancelDownload}
+                  disabled={downloadCancelled}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: downloadCancelled ? '#6c757d' : '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: downloadCancelled ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {downloadCancelled ? '⏳ Cancelling...' : '✕ Cancel'}
+                </button>
+              </div>
             </div>
             <div style={{
               width: '100%',
@@ -317,7 +436,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
             }}>
               <div style={{
                 height: '100%',
-                backgroundColor: '#28a745',
+                backgroundColor: downloadCancelled ? '#ffc107' : '#28a745',
                 width: downloadProgress.total > 0 ? `${(downloadProgress.current / downloadProgress.total) * 100}%` : '0%',
                 transition: 'width 0.3s ease'
               }} />
