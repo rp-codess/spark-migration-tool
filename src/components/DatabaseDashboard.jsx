@@ -1074,6 +1074,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                         ) : tableData.length > 0 ? (
                           <div style={{ 
                             width: '100%',
+                            maxWidth: 'calc(100vw - 400px)', // Subtract sidebar and padding
                             height: '500px',
                             border: '1px solid var(--border-color)',
                             borderRadius: '4px',
@@ -1083,7 +1084,8 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                             <table style={{
                               borderCollapse: 'collapse',
                               fontSize: '13px',
-                              width: 'auto',
+                              width: 'max-content', // Changed from 'auto' to ensure table expands for all columns
+                              minWidth: '100%', // Ensure minimum width fills container
                               display: 'table'
                             }}>
                               <thead style={{ 
