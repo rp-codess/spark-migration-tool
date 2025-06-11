@@ -98,8 +98,18 @@ ipcMain.handle('save-schema-to-file', async (event, data, filename) => {
     console.log('Creating directory structure:', fileDirectory)
     await fs.promises.mkdir(fileDirectory, { recursive: true })
     
+    // Determine if data is JSON or plain text (SQL)
+    let fileContent
+    if (typeof data === 'string') {
+      // It's already a string (SQL content)
+      fileContent = data
+    } else {
+      // It's an object (JSON content)
+      fileContent = JSON.stringify(data, null, 2)
+    }
+    
     console.log('Writing file to:', fullFilePath)
-    await fs.promises.writeFile(fullFilePath, JSON.stringify(data, null, 2), 'utf8')
+    await fs.promises.writeFile(fullFilePath, fileContent, 'utf8')
     console.log('File saved successfully')
     
     // Verify file exists
@@ -136,6 +146,36 @@ ipcMain.handle('save-schema-to-folder', async (event, data, folderName, filename
     return { success: true, filePath }
   } catch (error) {
     console.error('Error saving file:', error)
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('get-table-sql', async (event, tableName, schemaName) => {
+  console.log('get-table-sql handler called for:', tableName, schemaName)
+  try {
+    const sql = await DatabaseManager.getTableSQL(tableName, schemaName)
+    return { success: true, sql }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('get-table-constraints', async (event, tableName, schemaName) => {
+  console.log('get-table-constraints handler called for:', tableName, schemaName)
+  try {
+    const constraints = await DatabaseManager.getTableConstraints(tableName, schemaName)
+    return { success: true, constraints }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('get-table-foreign-keys', async (event, tableName, schemaName) => {
+  console.log('get-table-foreign-keys handler called for:', tableName, schemaName)
+  try {
+    const foreignKeys = await DatabaseManager.getTableForeignKeys(tableName, schemaName)
+    return { success: true, foreignKeys }
+  } catch (error) {
     return { success: false, message: error.message }
   }
 })

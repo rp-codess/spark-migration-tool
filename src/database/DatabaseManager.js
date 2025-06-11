@@ -304,16 +304,52 @@ class DatabaseManager {
     const { pool } = this.currentConnection
     const result = await pool.request().query(`
       SELECT 
-        COLUMN_NAME,
-        DATA_TYPE,
-        IS_NULLABLE,
-        COLUMN_DEFAULT,
-        CHARACTER_MAXIMUM_LENGTH,
-        NUMERIC_PRECISION,
-        NUMERIC_SCALE
-      FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_NAME = '${tableName}' AND TABLE_SCHEMA = '${schemaName}'
-      ORDER BY ORDINAL_POSITION
+        c.COLUMN_NAME,
+        c.DATA_TYPE,
+        c.IS_NULLABLE,
+        c.COLUMN_DEFAULT,
+        c.CHARACTER_MAXIMUM_LENGTH,
+        c.NUMERIC_PRECISION,
+        c.NUMERIC_SCALE,
+        c.DATETIME_PRECISION,
+        COLUMNPROPERTY(OBJECT_ID(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME)), c.COLUMN_NAME, 'IsIdentity') as IS_IDENTITY,
+        CASE 
+          WHEN COLUMNPROPERTY(OBJECT_ID(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME)), c.COLUMN_NAME, 'IsIdentity') = 1 
+          THEN IDENT_SEED(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME))
+          ELSE NULL 
+        END as IDENTITY_SEED,
+        CASE 
+          WHEN COLUMNPROPERTY(OBJECT_ID(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME)), c.COLUMN_NAME, 'IsIdentity') = 1 
+          THEN IDENT_INCR(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME))
+          ELSE NULL 
+        END as IDENTITY_INCREMENT,
+        COLUMNPROPERTY(OBJECT_ID(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME)), c.COLUMN_NAME, 'IsComputed') as IS_COMPUTED,
+        cc.definition as COMPUTED_DEFINITION,
+        -- Check if column is part of primary key
+        CASE 
+          WHEN pk.COLUMN_NAME IS NOT NULL THEN 1 
+          ELSE 0 
+        END as IS_PRIMARY_KEY,
+        pk.CONSTRAINT_NAME as PRIMARY_KEY_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS c
+      LEFT JOIN sys.computed_columns cc ON cc.object_id = OBJECT_ID(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME)) 
+        AND cc.name = c.COLUMN_NAME
+      LEFT JOIN (
+        SELECT 
+          kcu.COLUMN_NAME,
+          kcu.TABLE_SCHEMA,
+          kcu.TABLE_NAME,
+          tc.CONSTRAINT_NAME
+        FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+        INNER JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc 
+          ON kcu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME 
+          AND kcu.TABLE_SCHEMA = tc.TABLE_SCHEMA
+        WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+      ) pk ON pk.COLUMN_NAME = c.COLUMN_NAME 
+        AND pk.TABLE_SCHEMA = c.TABLE_SCHEMA 
+        AND pk.TABLE_NAME = c.TABLE_NAME
+      WHERE c.TABLE_NAME = '${tableName}' AND c.TABLE_SCHEMA = '${schemaName}'
+      ORDER BY c.ORDINAL_POSITION
     `)
     return result.recordset
   }
@@ -378,6 +414,267 @@ class DatabaseManager {
       NUMERIC_PRECISION: row[5],
       NUMERIC_SCALE: row[6]
     }))
+  }
+
+  async getTableSQL(tableName, schemaName) {
+    if (!this.currentConnection) {
+      throw new Error('Database not connected')
+    }
+
+    try {
+      const schema = await this.getTableSchema(tableName, schemaName)
+      const constraints = await this.getTableConstraints(tableName, schemaName)
+      const foreignKeys = await this.getTableForeignKeys(tableName, schemaName)
+      
+      let sql = this.generateCreateTableSQL(tableName, schemaName, schema)
+      
+      // Add constraints that aren't already in the CREATE TABLE
+      const nonPrimaryConstraints = constraints.filter(c => 
+        (c.CONSTRAINT_TYPE || c.constraint_type) !== 'PRIMARY KEY'
+      )
+      if (nonPrimaryConstraints.length > 0) {
+        sql += '\n' + this.generateConstraintsSQL(tableName, schemaName, nonPrimaryConstraints)
+      }
+      
+      // Add foreign keys
+      if (foreignKeys.length > 0) {
+        sql += '\n' + this.generateForeignKeysSQL(tableName, schemaName, foreignKeys)
+      }
+      
+      // Add DEFAULT constraints as separate ALTER statements
+      const defaultConstraints = this.generateDefaultConstraints(tableName, schemaName, schema)
+      if (defaultConstraints) {
+        sql += '\n' + defaultConstraints
+      }
+      
+      return sql
+    } catch (error) {
+      console.error('Error getting table SQL:', error)
+      throw error
+    }
+  }
+
+  generateDefaultConstraints(tableName, schemaName, schema) {
+    let sql = ''
+    
+    schema.forEach(column => {
+      const columnName = column.COLUMN_NAME || column.column_name
+      const defaultValue = column.COLUMN_DEFAULT || column.column_default
+      const isIdentity = column.IS_IDENTITY === 1
+      
+      if (defaultValue && defaultValue !== 'NULL' && !isIdentity) {
+        let cleanDefault = defaultValue.trim()
+        // Remove extra parentheses that SQL Server sometimes adds
+        if (cleanDefault.startsWith('(') && cleanDefault.endsWith(')')) {
+          cleanDefault = cleanDefault.slice(1, -1)
+        }
+        sql += `ALTER TABLE [${schemaName}].[${tableName}] ADD  DEFAULT ${cleanDefault} FOR [${columnName}]\n`
+        sql += `GO\n\n`
+      }
+    })
+    
+    return sql
+  }
+
+  generateCreateTableSQL(tableName, schemaName, schema) {
+    let sql = `/****** Object:  Table [${schemaName}].[${tableName}]    Script Date: ${new Date().toLocaleString()} ******/\n`
+    sql += `SET ANSI_NULLS ON\n`
+    sql += `GO\n\n`
+    sql += `SET QUOTED_IDENTIFIER ON\n`
+    sql += `GO\n\n`
+    
+    // CREATE TABLE statement
+    sql += `CREATE TABLE [${schemaName}].[${tableName}](\n`
+    
+    const columnDefinitions = schema.map(column => {
+      const columnName = column.COLUMN_NAME || column.column_name
+      const dataType = column.DATA_TYPE || column.data_type
+      const maxLength = column.CHARACTER_MAXIMUM_LENGTH || column.character_maximum_length
+      const numericPrecision = column.NUMERIC_PRECISION || column.numeric_precision
+      const numericScale = column.NUMERIC_SCALE || column.numeric_scale
+      const datetimePrecision = column.DATETIME_PRECISION || column.datetime_precision
+      const isNullable = (column.IS_NULLABLE || column.is_nullable) === 'YES'
+      const isIdentity = column.IS_IDENTITY === 1
+      const identitySeed = column.IDENTITY_SEED || 1
+      const identityIncrement = column.IDENTITY_INCREMENT || 1
+      const isComputed = column.IS_COMPUTED === 1
+      const computedDefinition = column.COMPUTED_DEFINITION
+      
+      let columnDef = `\t[${columnName}] `
+      
+      // Handle computed columns
+      if (isComputed && computedDefinition) {
+        columnDef += `AS ${computedDefinition}`
+        return columnDef
+      }
+      
+      // Data type with proper formatting
+      let dataTypeStr = dataType.toUpperCase()
+      
+      // Add length/precision for different data types
+      if (maxLength && ['VARCHAR', 'NVARCHAR', 'CHAR', 'NCHAR', 'VARBINARY', 'BINARY'].includes(dataTypeStr)) {
+        dataTypeStr += `(${maxLength === -1 ? 'max' : maxLength})`
+      } else if (numericPrecision && ['DECIMAL', 'NUMERIC', 'FLOAT', 'REAL'].includes(dataTypeStr)) {
+        if (numericScale !== null && numericScale !== undefined) {
+          dataTypeStr += `(${numericPrecision},${numericScale})`
+        } else {
+          dataTypeStr += `(${numericPrecision})`
+        }
+      } else if (datetimePrecision && ['DATETIME2', 'DATETIMEOFFSET', 'TIME'].includes(dataTypeStr)) {
+        dataTypeStr += `(${datetimePrecision})`
+      }
+      
+      columnDef += `[${dataTypeStr}]`
+      
+      // Add IDENTITY
+      if (isIdentity) {
+        columnDef += ` IDENTITY(${identitySeed},${identityIncrement})`
+      }
+      
+      // Add NOT NULL or NULL
+      if (!isNullable) {
+        columnDef += ' NOT NULL'
+      } else {
+        columnDef += ' NULL'
+      }
+      
+      return columnDef
+    })
+    
+    sql += columnDefinitions.join(',\n')
+    
+    // Add primary key constraints inline if they exist
+    const primaryKeyColumns = this.getPrimaryKeyColumns(schema)
+    if (primaryKeyColumns.length > 0) {
+      const pkName = this.getPrimaryKeyName(tableName, schema)
+      sql += `,\n CONSTRAINT [${pkName}] PRIMARY KEY CLUSTERED \n(\n`
+      sql += primaryKeyColumns.map(col => `\t[${col}] ASC`).join(',\n')
+      sql += `\n)WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]`
+    }
+
+    // Check if table has TEXT/IMAGE columns
+    const hasTextImage = schema.some(col => {
+      const dataType = (col.DATA_TYPE || col.data_type).toUpperCase()
+      const maxLength = col.CHARACTER_MAXIMUM_LENGTH || col.character_maximum_length
+      return (dataType === 'VARCHAR' || dataType === 'NVARCHAR') && maxLength === -1
+    })
+    
+    sql += '\n) ON [PRIMARY]'
+    if (hasTextImage) {
+      sql += ' TEXTIMAGE_ON [PRIMARY]'
+    }
+    sql += '\n'
+    sql += 'GO\n\n'
+    
+    return sql
+  }
+
+  // Helper method to get primary key columns with better detection
+  getPrimaryKeyColumns(schema) {
+    // First check for columns marked as primary key
+    const primaryKeyColumns = schema.filter(col => col.IS_PRIMARY_KEY === 1)
+    if (primaryKeyColumns.length > 0) {
+      return primaryKeyColumns.map(col => col.COLUMN_NAME || col.column_name)
+    }
+    
+    // Fallback: look for identity columns
+    const identityColumns = schema.filter(col => col.IS_IDENTITY === 1)
+    if (identityColumns.length > 0) {
+      return identityColumns.map(col => col.COLUMN_NAME || col.column_name)
+    }
+    
+    return []
+  }
+
+  // Helper method to get primary key constraint name from schema
+  getPrimaryKeyName(tableName, schema) {
+    const pkColumn = schema.find(col => col.IS_PRIMARY_KEY === 1)
+    if (pkColumn && pkColumn.PRIMARY_KEY_NAME) {
+      return pkColumn.PRIMARY_KEY_NAME
+    }
+    return `PK_${tableName}`
+  }
+
+  generateConstraintsSQL(tableName, schemaName, constraints) {
+    let sql = `-- Constraints for ${schemaName}.${tableName}\n`
+    sql += `-- Generated on ${new Date().toISOString()}\n\n`
+    
+    // Group constraints by type and name
+    const constraintGroups = {}
+    constraints.forEach(constraint => {
+      const constraintName = constraint.CONSTRAINT_NAME || constraint.constraint_name
+      const constraintType = constraint.CONSTRAINT_TYPE || constraint.constraint_type
+      const columnName = constraint.COLUMN_NAME || constraint.column_name
+      
+      if (!constraintGroups[constraintName]) {
+        constraintGroups[constraintName] = {
+          name: constraintName,
+          type: constraintType,
+          columns: []
+        }
+      }
+      if (columnName) {
+        constraintGroups[constraintName].columns.push(columnName)
+      }
+    })
+    
+    Object.values(constraintGroups).forEach(constraint => {
+      if (constraint.type === 'PRIMARY KEY') {
+        // Skip if already included in CREATE TABLE
+        return
+      } else if (constraint.type === 'UNIQUE') {
+        sql += `-- Unique Constraint\n`
+        sql += `ALTER TABLE [${schemaName}].[${tableName}]\n`
+        sql += `ADD CONSTRAINT [${constraint.name}] UNIQUE NONCLUSTERED \n(\n`
+        sql += constraint.columns.map(col => `\t[${col}] ASC`).join(',\n')
+        sql += `\n)WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]\n`
+        sql += `GO\n\n`
+      } else if (constraint.type === 'CHECK') {
+        sql += `-- Check Constraint\n`
+        sql += `ALTER TABLE [${schemaName}].[${tableName}]\n`
+        sql += `ADD CONSTRAINT [${constraint.name}] CHECK (/* Check condition needs to be retrieved from sys.check_constraints */)\n`
+        sql += `GO\n\n`
+      }
+    })
+    
+    return sql
+  }
+
+  generateForeignKeysSQL(tableName, schemaName, foreignKeys) {
+    let sql = `-- Foreign Keys for ${schemaName}.${tableName}\n`
+    sql += `-- Generated on ${new Date().toISOString()}\n\n`
+    
+    // Group foreign keys by constraint name
+    const fkGroups = {}
+    foreignKeys.forEach(fk => {
+      const constraintName = fk.CONSTRAINT_NAME || fk.constraint_name
+      if (!fkGroups[constraintName]) {
+        fkGroups[constraintName] = {
+          name: constraintName,
+          columns: [],
+          referencedTable: fk.REFERENCED_TABLE_NAME || fk.referenced_table_name,
+          referencedSchema: fk.REFERENCED_TABLE_SCHEMA || fk.referenced_table_schema,
+          referencedColumns: []
+        }
+      }
+      fkGroups[constraintName].columns.push(fk.COLUMN_NAME || fk.column_name)
+      fkGroups[constraintName].referencedColumns.push(fk.REFERENCED_COLUMN_NAME || fk.referenced_column_name)
+    })
+    
+    Object.values(fkGroups).forEach(fk => {
+      sql += `-- Foreign Key: ${fk.name}\n`
+      sql += `ALTER TABLE [${schemaName}].[${tableName}] WITH CHECK\n`
+      sql += `ADD CONSTRAINT [${fk.name}] FOREIGN KEY(\n`
+      sql += fk.columns.map(col => `\t[${col}]`).join(',\n')
+      sql += `\n) REFERENCES [${fk.referencedSchema}].[${fk.referencedTable}] (\n`
+      sql += fk.referencedColumns.map(col => `\t[${col}]`).join(',\n')
+      sql += `\n)\n`
+      sql += `GO\n\n`
+      sql += `ALTER TABLE [${schemaName}].[${tableName}] CHECK CONSTRAINT [${fk.name}]\n`
+      sql += `GO\n\n`
+    })
+    
+    return sql
   }
 
   disconnect() {

@@ -403,14 +403,7 @@
 
 .schema-table th.center {
   text-align: center;
-}
-
-.schema-table tbody tr {
-  border-bottom: 1px solid var(--border-color);
-}
-
-.schema-table tbody tr:nth-child(even) {
-  background-color: var(--bg-secondary);
+  width: 80px;
 }
 
 .schema-table td {
@@ -420,20 +413,28 @@
 
 .schema-table td.column-name {
   font-weight: 500;
+  display: flex;
+  align-items: center;
 }
 
 .schema-table td.column-type {
   font-family: monospace;
   background-color: var(--bg-tertiary);
+  min-width: 120px;
 }
 
 .schema-table td.column-nullable {
   text-align: center;
+  width: 80px;
 }
 
 .schema-table td.column-default {
   font-family: monospace;
   color: var(--text-secondary);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nullable-yes {

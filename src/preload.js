@@ -17,7 +17,12 @@ const electronAPI = {
   
   // Spark operations
   startSparkJob: (jobConfig) => ipcRenderer.invoke('start-spark-job', jobConfig),
-  getJobStatus: (jobId) => ipcRenderer.invoke('get-job-status', jobId)
+  getJobStatus: (jobId) => ipcRenderer.invoke('get-job-status', jobId),
+  
+  // New SQL functions
+  getTableSQL: (tableName, schemaName) => ipcRenderer.invoke('get-table-sql', tableName, schemaName),
+  getTableConstraints: (tableName, schemaName) => ipcRenderer.invoke('get-table-constraints', tableName, schemaName),
+  getTableForeignKeys: (tableName, schemaName) => ipcRenderer.invoke('get-table-foreign-keys', tableName, schemaName)
 }
 
 console.log('ElectronAPI functions:', Object.keys(electronAPI))
