@@ -22,7 +22,8 @@ const electronAPI = {
   // New SQL functions
   getTableSQL: (tableName, schemaName) => ipcRenderer.invoke('get-table-sql', tableName, schemaName),
   getTableConstraints: (tableName, schemaName) => ipcRenderer.invoke('get-table-constraints', tableName, schemaName),
-  getTableForeignKeys: (tableName, schemaName) => ipcRenderer.invoke('get-table-foreign-keys', tableName, schemaName)
+  getTableForeignKeys: (tableName, schemaName) => ipcRenderer.invoke('get-table-foreign-keys', tableName, schemaName),
+  getTableRowCount: (tableName, schemaName) => ipcRenderer.invoke('get-table-row-count', tableName, schemaName)
 }
 
 console.log('ElectronAPI functions:', Object.keys(electronAPI))

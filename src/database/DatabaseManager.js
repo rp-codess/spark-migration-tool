@@ -666,6 +666,62 @@ class DatabaseManager {
     return sql
   }
 
+  async getTableRowCount(tableName, schemaName) {
+    if (!this.currentConnection) {
+      throw new Error('No active database connection')
+    }
+
+    const { type } = this.currentConnection
+    switch (type) {
+      case 'mssql':
+        return await this.getMSSQLTableRowCount(tableName, schemaName)
+      case 'postgresql':
+        return await this.getPostgreSQLTableRowCount(tableName, schemaName)
+      case 'mysql':
+        return await this.getMySQLTableRowCount(tableName, schemaName)
+      case 'oracle':
+        return await this.getOracleTableRowCount(tableName, schemaName)
+      default:
+        throw new Error(`Unsupported database type: ${type}`)
+    }
+  }
+
+  async getMSSQLTableRowCount(tableName, schemaName) {
+    const { pool } = this.currentConnection
+    const result = await pool.request().query(`
+      SELECT COUNT(*) as row_count
+      FROM [${schemaName}].[${tableName}]
+    `)
+    return result.recordset[0].row_count
+  }
+
+  async getPostgreSQLTableRowCount(tableName, schemaName) {
+    const { client } = this.currentConnection
+    const result = await client.query(`
+      SELECT COUNT(*) as row_count
+      FROM "${schemaName}"."${tableName}"
+    `)
+    return parseInt(result.rows[0].row_count)
+  }
+
+  async getMySQLTableRowCount(tableName, schemaName) {
+    const { connection } = this.currentConnection
+    const [rows] = await connection.execute(`
+      SELECT COUNT(*) as row_count
+      FROM \`${schemaName}\`.\`${tableName}\`
+    `)
+    return rows[0].row_count
+  }
+
+  async getOracleTableRowCount(tableName, schemaName) {
+    const { connection } = this.currentConnection
+    const result = await connection.execute(`
+      SELECT COUNT(*) as row_count
+      FROM "${schemaName}"."${tableName}"
+    `)
+    return result.rows[0][0]
+  }
+
   disconnect() {
     if (this.currentConnection) {
       const { type } = this.currentConnection

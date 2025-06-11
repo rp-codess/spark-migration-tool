@@ -8,6 +8,8 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
   const [tables, setTables] = useState([])
   const [selectedTable, setSelectedTable] = useState(null)
   const [tableSchema, setTableSchema] = useState([])
+  const [tableRowCount, setTableRowCount] = useState(null)
+  const [loadingRowCount, setLoadingRowCount] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [downloading, setDownloading] = useState(false)
@@ -44,6 +46,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
   const loadTableSchema = async (table) => {
     setLoading(true)
     setError('')
+    setTableRowCount(null) // Reset row count when switching tables
     try {
       const result = await window.electronAPI.getTableSchema(table.name, table.schema)
       if (result.success) {
@@ -56,6 +59,25 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadTableRowCount = async () => {
+    if (!selectedTable) return
+    
+    setLoadingRowCount(true)
+    setError('')
+    try {
+      const result = await window.electronAPI.getTableRowCount(selectedTable.name, selectedTable.schema)
+      if (result.success) {
+        setTableRowCount(result.count)
+      } else {
+        setError(result.message)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoadingRowCount(false)
     }
   }
 
@@ -648,6 +670,12 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
             </div>
             <div className="stat-label">Columns Selected</div>
           </div>
+          <div className="stat-card animate-scaleIn">
+            <div className="stat-number info">
+              {tableRowCount !== null ? tableRowCount.toLocaleString() : '-'}
+            </div>
+            <div className="stat-label">Rows in Table</div>
+          </div>
         </div>
 
         {/* Main Explorer */}
@@ -746,6 +774,16 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                 </h3>
                 {selectedTable && tableSchema.length > 0 && (
                   <div style={{ display: 'flex', gap: '8px' }}>
+                    <Button
+                      onClick={loadTableRowCount}
+                      disabled={loadingRowCount}
+                      variant="info"
+                      icon={loadingRowCount ? '⏳' : '🔢'}
+                      size="sm"
+                      loading={loadingRowCount}
+                    >
+                      Count Rows
+                    </Button>
                     <Button
                       onClick={downloadTableSchema}
                       variant="success"

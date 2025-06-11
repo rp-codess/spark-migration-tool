@@ -180,6 +180,16 @@ ipcMain.handle('get-table-foreign-keys', async (event, tableName, schemaName) =>
   }
 })
 
+ipcMain.handle('get-table-row-count', async (event, tableName, schemaName) => {
+  console.log('get-table-row-count handler called for:', tableName, schemaName)
+  try {
+    const count = await DatabaseManager.getTableRowCount(tableName, schemaName)
+    return { success: true, count }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
 // Additional handlers for Spark operations (placeholders)
 ipcMain.handle('start-spark-job', async (event, jobConfig) => {
   console.log('start-spark-job handler called')
