@@ -8,8 +8,11 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
   const [tables, setTables] = useState([])
   const [selectedTable, setSelectedTable] = useState(null)
   const [tableSchema, setTableSchema] = useState([])
+  const [tableData, setTableData] = useState([])
   const [tableRowCount, setTableRowCount] = useState(null)
   const [loadingRowCount, setLoadingRowCount] = useState(false)
+  const [loadingTableData, setLoadingTableData] = useState(false)
+  const [viewMode, setViewMode] = useState('schema') // 'schema' or 'data'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [downloading, setDownloading] = useState(false)
@@ -47,6 +50,8 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     setLoading(true)
     setError('')
     setTableRowCount(null) // Reset row count when switching tables
+    setTableData([]) // Reset table data when switching tables
+    setViewMode('schema') // Reset to schema view when switching tables
     try {
       const result = await window.electronAPI.getTableSchema(table.name, table.schema)
       if (result.success) {
@@ -59,6 +64,26 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadTableData = async () => {
+    if (!selectedTable) return
+    
+    setLoadingTableData(true)
+    setError('')
+    try {
+      const result = await window.electronAPI.getTableData(selectedTable.name, selectedTable.schema, 100)
+      if (result.success) {
+        setTableData(result.data)
+        setViewMode('data')
+      } else {
+        setError(result.message)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoadingTableData(false)
     }
   }
 
@@ -769,11 +794,52 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
             {/* Schema Details */}
             <div className="schema-details">
               <div className="schema-header">
-                <h3 className="schema-title">
-                  {selectedTable ? `${selectedTable.schema}.${selectedTable.name}` : 'Select a table to view schema'}
-                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <h3 className="schema-title">
+                    {selectedTable ? `${selectedTable.schema}.${selectedTable.name}` : 'Select a table to view details'}
+                  </h3>
+                  
+                  {/* View Mode Toggle */}
+                  {selectedTable && tableSchema.length > 0 && (
+                    <div className="view-toggle" style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
+                      <button
+                        className={`toggle-btn ${viewMode === 'schema' ? 'active' : ''}`}
+                        onClick={() => setViewMode('schema')}
+                        style={{
+                          padding: '6px 12px',
+                          border: '1px solid var(--border-color)',
+                          background: viewMode === 'schema' ? 'var(--color-primary)' : 'var(--bg-secondary)',
+                          color: viewMode === 'schema' ? 'white' : 'var(--text-primary)',
+                          borderRadius: '4px 0 0 4px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        📋 Schema
+                      </button>
+                      <button
+                        className={`toggle-btn ${viewMode === 'data' ? 'active' : ''}`}
+                        onClick={() => setViewMode('data')}
+                        style={{
+                          padding: '6px 12px',
+                          border: '1px solid var(--border-color)',
+                          background: viewMode === 'data' ? 'var(--color-primary)' : 'var(--bg-secondary)',
+                          color: viewMode === 'data' ? 'white' : 'var(--text-primary)',
+                          borderRadius: '0 4px 4px 0',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        📊 Data
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
                 {selectedTable && tableSchema.length > 0 && (
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                     <Button
                       onClick={loadTableRowCount}
                       disabled={loadingRowCount}
@@ -784,6 +850,18 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                     >
                       Count Rows
                     </Button>
+                    
+                    <Button
+                      onClick={loadTableData}
+                      disabled={loadingTableData}
+                      variant="warning"
+                      icon={loadingTableData ? '⏳' : '👁️'}
+                      size="sm"
+                      loading={loadingTableData}
+                    >
+                      Show Top 100
+                    </Button>
+                    
                     <Button
                       onClick={downloadTableSchema}
                       variant="success"
@@ -808,70 +886,304 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
                 {loading && selectedTable ? (
                   <div className="loading-state">
                     <div className="loading-icon">⏳</div>
-                    Loading schema...
+                    Loading...
                   </div>
                 ) : selectedTable && tableSchema.length > 0 ? (
-                  <table className="schema-table">
-                    <thead>
-                      <tr>
-                        <th>Column</th>
-                        <th>Type</th>
-                        <th className="center">PK</th>
-                        <th className="center">Identity</th>
-                        <th className="center">Nullable</th>
-                        <th>Default</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tableSchema.map((column, index) => {
-                        const columnName = column.COLUMN_NAME || column.column_name
-                        const dataType = column.DATA_TYPE || column.data_type
-                        const maxLength = column.CHARACTER_MAXIMUM_LENGTH || column.character_maximum_length
-                        const isNullable = (column.IS_NULLABLE || column.is_nullable) === 'YES'
-                        const defaultValue = column.COLUMN_DEFAULT || column.column_default
-                        const isPrimaryKey = column.IS_PRIMARY_KEY === 1
-                        const isIdentity = column.IS_IDENTITY === 1
-                        const identitySeed = column.IDENTITY_SEED
-                        const identityIncrement = column.IDENTITY_INCREMENT
-                        
-                        return (
-                          <tr key={index}>
-                            <td className="column-name">
-                              {columnName}
-                              {isPrimaryKey && <span style={{ color: 'var(--color-primary)', fontWeight: 'bold', marginLeft: '8px' }}>🔑</span>}
-                            </td>
-                            <td className="column-type">
-                              {dataType.toUpperCase()}
-                              {maxLength && `(${maxLength === -1 ? 'MAX' : maxLength})`}
-                            </td>
-                            <td className="column-nullable">
-                              {isPrimaryKey ? 
-                                <span style={{ color: 'var(--color-primary)', fontSize: '16px' }}>🔑</span> : 
-                                <span style={{ color: 'var(--text-tertiary)', fontSize: '14px' }}>-</span>
-                              }
-                            </td>
-                            <td className="column-nullable">
-                              {isIdentity ? 
-                                <span style={{ color: 'var(--color-success)', fontSize: '14px' }} title={`IDENTITY(${identitySeed},${identityIncrement})`}>
-                                  🔢 ({identitySeed},{identityIncrement})
-                                </span> : 
-                                <span style={{ color: 'var(--text-tertiary)', fontSize: '14px' }}>-</span>
-                              }
-                            </td>
-                            <td className="column-nullable">
-                              {isNullable ? 
-                                <span className="nullable-yes">✓</span> : 
-                                <span className="nullable-no">✗</span>
-                              }
-                            </td>
-                            <td className="column-default">
-                              {defaultValue && defaultValue !== 'NULL' ? defaultValue : '-'}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                  <>
+                    {/* Schema View */}
+                    {viewMode === 'schema' && (
+                      <div style={{ 
+                        overflowX: 'auto', 
+                        overflowY: 'auto',
+                        maxHeight: '500px',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '4px'
+                      }}>
+                        <table className="schema-table" style={{
+                          width: '100%',
+                          minWidth: 'max-content',
+                          borderCollapse: 'collapse',
+                          fontSize: '13px'
+                        }}>
+                          <thead style={{ 
+                            position: 'sticky', 
+                            top: 0, 
+                            background: 'var(--bg-primary)', 
+                            zIndex: 1,
+                            borderBottom: '2px solid var(--border-color)'
+                          }}>
+                            <tr>
+                              <th style={{ 
+                                minWidth: '150px',
+                                padding: '8px 12px',
+                                textAlign: 'left',
+                                fontWeight: '600',
+                                fontSize: '12px',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border-color)',
+                                borderBottom: '2px solid var(--border-color)'
+                              }}>Column</th>
+                              <th style={{ 
+                                minWidth: '120px',
+                                padding: '8px 12px',
+                                textAlign: 'left',
+                                fontWeight: '600',
+                                fontSize: '12px',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border-color)',
+                                borderBottom: '2px solid var(--border-color)'
+                              }}>Type</th>
+                              <th className="center" style={{ 
+                                minWidth: '60px',
+                                padding: '8px 12px',
+                                textAlign: 'center',
+                                fontWeight: '600',
+                                fontSize: '12px',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border-color)',
+                                borderBottom: '2px solid var(--border-color)'
+                              }}>PK</th>
+                              <th className="center" style={{ 
+                                minWidth: '100px',
+                                padding: '8px 12px',
+                                textAlign: 'center',
+                                fontWeight: '600',
+                                fontSize: '12px',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border-color)',
+                                borderBottom: '2px solid var(--border-color)'
+                              }}>Identity</th>
+                              <th className="center" style={{ 
+                                minWidth: '80px',
+                                padding: '8px 12px',
+                                textAlign: 'center',
+                                fontWeight: '600',
+                                fontSize: '12px',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border-color)',
+                                borderBottom: '2px solid var(--border-color)'
+                              }}>Nullable</th>
+                              <th style={{ 
+                                minWidth: '120px',
+                                padding: '8px 12px',
+                                textAlign: 'left',
+                                fontWeight: '600',
+                                fontSize: '12px',
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border-color)',
+                                borderBottom: '2px solid var(--border-color)'
+                              }}>Default</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tableSchema.map((column, index) => {
+                              const columnName = column.COLUMN_NAME || column.column_name
+                              const dataType = column.DATA_TYPE || column.data_type
+                              const maxLength = column.CHARACTER_MAXIMUM_LENGTH || column.character_maximum_length
+                              const isNullable = (column.IS_NULLABLE || column.is_nullable) === 'YES'
+                              const defaultValue = column.COLUMN_DEFAULT || column.column_default
+                              const isPrimaryKey = column.IS_PRIMARY_KEY === 1
+                              const isIdentity = column.IS_IDENTITY === 1
+                              const identitySeed = column.IDENTITY_SEED
+                              const identityIncrement = column.IDENTITY_INCREMENT
+                              
+                              return (
+                                <tr key={index} style={{
+                                  backgroundColor: index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)'
+                                }}>
+                                  <td className="column-name" style={{ 
+                                    padding: '6px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    fontSize: '13px',
+                                    verticalAlign: 'top'
+                                  }}>
+                                    {columnName}
+                                    {isPrimaryKey && <span style={{ color: 'var(--color-primary)', fontWeight: 'bold', marginLeft: '8px' }}>🔑</span>}
+                                  </td>
+                                  <td className="column-type" style={{ 
+                                    padding: '6px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    fontSize: '13px',
+                                    verticalAlign: 'top'
+                                  }}>
+                                    {dataType.toUpperCase()}
+                                    {maxLength && `(${maxLength === -1 ? 'MAX' : maxLength})`}
+                                  </td>
+                                  <td className="column-nullable" style={{ 
+                                    padding: '6px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    fontSize: '13px',
+                                    textAlign: 'center',
+                                    verticalAlign: 'top'
+                                  }}>
+                                    {isPrimaryKey ? 
+                                      <span style={{ color: 'var(--color-primary)', fontSize: '16px' }}>🔑</span> : 
+                                      <span style={{ color: 'var(--text-tertiary)', fontSize: '14px' }}>-</span>
+                                    }
+                                  </td>
+                                  <td className="column-nullable" style={{ 
+                                    padding: '6px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    fontSize: '13px',
+                                    textAlign: 'center',
+                                    verticalAlign: 'top'
+                                  }}>
+                                    {isIdentity ? 
+                                      <span style={{ color: 'var(--color-success)', fontSize: '14px' }} title={`IDENTITY(${identitySeed},${identityIncrement})`}>
+                                        🔢 ({identitySeed},{identityIncrement})
+                                      </span> : 
+                                      <span style={{ color: 'var(--text-tertiary)', fontSize: '14px' }}>-</span>
+                                    }
+                                  </td>
+                                  <td className="column-nullable" style={{ 
+                                    padding: '6px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    fontSize: '13px',
+                                    textAlign: 'center',
+                                    verticalAlign: 'top'
+                                  }}>
+                                    {isNullable ? 
+                                      <span className="nullable-yes">✓</span> : 
+                                      <span className="nullable-no">✗</span>
+                                    }
+                                  </td>
+                                  <td className="column-default" style={{ 
+                                    padding: '6px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    fontSize: '13px',
+                                    verticalAlign: 'top'
+                                  }}>
+                                    {defaultValue && defaultValue !== 'NULL' ? defaultValue : '-'}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Data View */}
+                    {viewMode === 'data' && (
+                      <>
+                        {loadingTableData ? (
+                          <div className="loading-state">
+                            <div className="loading-icon">⏳</div>
+                            Loading table data...
+                          </div>
+                        ) : tableData.length > 0 ? (
+                          <div style={{ 
+                            width: '100%',
+                            height: '500px',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '4px',
+                            position: 'relative',
+                            overflow: 'auto'
+                          }}>
+                            <table style={{
+                              borderCollapse: 'collapse',
+                              fontSize: '13px',
+                              width: 'auto',
+                              display: 'table'
+                            }}>
+                              <thead style={{ 
+                                position: 'sticky', 
+                                top: 0, 
+                                zIndex: 10,
+                                borderBottom: '2px solid var(--border-color)'
+                              }}>
+                                <tr>
+                                  {Object.keys(tableData[0]).map((column, index) => (
+                                    <th key={index} style={{ 
+                                      minWidth: '200px',
+                                      width: '200px',
+                                      padding: '8px 12px',
+                                      textAlign: 'left',
+                                      fontWeight: '600',
+                                      fontSize: '12px',
+                                      background: 'var(--bg-secondary)',
+                                      border: '1px solid var(--border-color)',
+                                      borderBottom: '2px solid var(--border-color)',
+                                      whiteSpace: 'nowrap',
+                                      position: 'sticky',
+                                      top: 0
+                                    }}>
+                                      {column}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {tableData.map((row, rowIndex) => (
+                                  <tr key={rowIndex} style={{
+                                    backgroundColor: rowIndex % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)'
+                                  }}>
+                                    {Object.values(row).map((value, colIndex) => (
+                                      <td key={colIndex} style={{ 
+                                        padding: '6px 12px',
+                                        minWidth: '200px',
+                                        width: '200px',
+                                        border: '1px solid var(--border-color)',
+                                        fontSize: '13px',
+                                        verticalAlign: 'top',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis'
+                                      }}>
+                                        {value === null ? (
+                                          <span style={{ 
+                                            color: 'var(--text-tertiary)', 
+                                            fontStyle: 'italic',
+                                            fontSize: '12px'
+                                          }}>
+                                            NULL
+                                          </span>
+                                        ) : value === '' ? (
+                                          <span style={{ 
+                                            color: 'var(--text-tertiary)', 
+                                            fontStyle: 'italic',
+                                            fontSize: '12px'
+                                          }}>
+                                            (empty)
+                                          </span>
+                                        ) : (
+                                          <span title={String(value)}>
+                                            {String(value)}
+                                          </span>
+                                        )}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            <div style={{ 
+                              padding: '8px 12px', 
+                              textAlign: 'center', 
+                              color: 'var(--text-secondary)', 
+                              fontSize: '12px',
+                              background: 'var(--bg-secondary)',
+                              borderTop: '1px solid var(--border-color)',
+                              fontWeight: '500',
+                              position: 'sticky',
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              zIndex: 5
+                            }}>
+                              Showing top {tableData.length} rows
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="empty-state">
+                            <div className="empty-icon">📊</div>
+                            <h3 className="empty-title">No data available</h3>
+                            <p className="empty-description">This table appears to be empty or data couldn't be retrieved</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
                 ) : (
                   <div className="empty-state">
                     <div className="empty-icon">📋</div>

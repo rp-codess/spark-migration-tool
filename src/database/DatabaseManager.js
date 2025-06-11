@@ -722,6 +722,74 @@ class DatabaseManager {
     return result.rows[0][0]
   }
 
+  async getTableData(tableName, schemaName, limit = 100) {
+    if (!this.currentConnection) {
+      throw new Error('No active database connection')
+    }
+
+    const { type } = this.currentConnection
+    switch (type) {
+      case 'mssql':
+        return await this.getMSSQLTableData(tableName, schemaName, limit)
+      case 'postgresql':
+        return await this.getPostgreSQLTableData(tableName, schemaName, limit)
+      case 'mysql':
+        return await this.getMySQLTableData(tableName, schemaName, limit)
+      case 'oracle':
+        return await this.getOracleTableData(tableName, schemaName, limit)
+      default:
+        throw new Error(`Unsupported database type: ${type}`)
+    }
+  }
+
+  async getMSSQLTableData(tableName, schemaName, limit) {
+    const { pool } = this.currentConnection
+    const result = await pool.request().query(`
+      SELECT TOP ${limit} *
+      FROM [${schemaName}].[${tableName}]
+      ORDER BY (SELECT NULL)
+    `)
+    return result.recordset
+  }
+
+  async getPostgreSQLTableData(tableName, schemaName, limit) {
+    const { client } = this.currentConnection
+    const result = await client.query(`
+      SELECT *
+      FROM "${schemaName}"."${tableName}"
+      LIMIT ${limit}
+    `)
+    return result.rows
+  }
+
+  async getMySQLTableData(tableName, schemaName, limit) {
+    const { connection } = this.currentConnection
+    const [rows] = await connection.execute(`
+      SELECT *
+      FROM \`${schemaName}\`.\`${tableName}\`
+      LIMIT ${limit}
+    `)
+    return rows
+  }
+
+  async getOracleTableData(tableName, schemaName, limit) {
+    const { connection } = this.currentConnection
+    const result = await connection.execute(`
+      SELECT *
+      FROM "${schemaName}"."${tableName}"
+      WHERE ROWNUM <= ${limit}
+    `)
+    // Convert Oracle result format to standard format
+    const columns = result.metaData.map(col => col.name)
+    return result.rows.map(row => {
+      const obj = {}
+      columns.forEach((col, index) => {
+        obj[col] = row[index]
+      })
+      return obj
+    })
+  }
+
   disconnect() {
     if (this.currentConnection) {
       const { type } = this.currentConnection

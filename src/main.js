@@ -190,6 +190,16 @@ ipcMain.handle('get-table-row-count', async (event, tableName, schemaName) => {
   }
 })
 
+ipcMain.handle('get-table-data', async (event, tableName, schemaName, limit = 100) => {
+  console.log('get-table-data handler called for:', tableName, schemaName, 'limit:', limit)
+  try {
+    const data = await DatabaseManager.getTableData(tableName, schemaName, limit)
+    return { success: true, data }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
 // Additional handlers for Spark operations (placeholders)
 ipcMain.handle('start-spark-job', async (event, jobConfig) => {
   console.log('start-spark-job handler called')
