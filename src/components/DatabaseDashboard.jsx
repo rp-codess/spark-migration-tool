@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useDatabaseData } from '../hooks/useDatabaseData'
 import { useDownloadManager } from '../hooks/useDownloadManager'
 import DashboardHeader from './dashboard/DashboardHeader'
@@ -28,7 +28,8 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     setViewMode,
     setSearchTerm,
     setError,
-    setLoading, // Add this line
+    setLoading,
+    setTableRowCount, // Add this line
     loadTables,
     loadTableSchema,
     loadTableData,
@@ -95,6 +96,32 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     }
   }
 
+  // Auto-load row count when a table is selected
+  useEffect(() => {
+    if (selectedTable && tableRowCount === null) {
+      console.log('🚀 Auto-loading row count for newly selected table:', selectedTable.name)
+      const timer = setTimeout(() => {
+        loadTableRowCount()
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [selectedTable, tableRowCount])
+
+  const handleTableSelect = async (table) => {
+    console.log('🎯 Table selected:', table.name)
+    await loadTableSchema(table)
+  }
+
+  const handleViewModeChange = async (mode) => {
+    setViewMode(mode)
+    // Auto-load data when switching to data view
+    if (mode === 'data' && selectedTable && tableData.length === 0) {
+      setTimeout(() => {
+        loadTableData()
+      }, 100) // Small delay to ensure view mode is set
+    }
+  }
+
   return (
     <div className="database-dashboard animate-fadeIn">
       <DashboardHeader
@@ -129,7 +156,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
               onSearchChange={setSearchTerm}
               onSearchClear={handleSearchClear}
               onRefresh={loadTables}
-              onTableSelect={loadTableSchema}
+              onTableSelect={handleTableSelect}
             />
 
             <SchemaDetails
@@ -137,10 +164,10 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
               tableSchema={tableSchema}
               tableData={tableData}
               viewMode={viewMode}
-              loading={loading || sqlDownloadLoading} // Combine both loading states
+              loading={loading || sqlDownloadLoading}
               loadingRowCount={loadingRowCount}
               loadingTableData={loadingTableData}
-              onViewModeChange={setViewMode}
+              onViewModeChange={handleViewModeChange} // Use the enhanced handler
               onLoadRowCount={loadTableRowCount}
               onLoadTableData={loadTableData}
               onDownloadJSON={handleDownloadTableJSON}

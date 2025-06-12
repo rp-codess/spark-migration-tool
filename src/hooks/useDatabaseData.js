@@ -17,6 +17,16 @@ export function useDatabaseData() {
     loadTables()
   }, [])
 
+  // Reset everything when selectedTable changes
+  useEffect(() => {
+    if (selectedTable) {
+      console.log('🔄 Selected table changed to:', selectedTable.name, '- Resetting row count')
+      setTableRowCount(null)
+      setTableData([])
+      setViewMode('schema')
+    }
+  }, [selectedTable])
+
   const loadTables = async () => {
     setLoading(true)
     setError('')
@@ -35,16 +45,16 @@ export function useDatabaseData() {
   }
 
   const loadTableSchema = async (table) => {
+    console.log('🔄 Loading table schema for:', table.name)
     setLoading(true)
     setError('')
-    setTableRowCount(null)
-    setTableData([])
-    setViewMode('schema')
+    
     try {
       const result = await window.electronAPI.getTableSchema(table.name, table.schema)
       if (result.success) {
         setTableSchema(result.schema)
-        setSelectedTable(table)
+        setSelectedTable(table) // This will trigger the useEffect above
+        console.log('✅ Table schema loaded for:', table.name)
       } else {
         setError(result.message)
       }
@@ -76,13 +86,18 @@ export function useDatabaseData() {
   }
 
   const loadTableRowCount = async () => {
-    if (!selectedTable) return
+    if (!selectedTable) {
+      console.log('❌ No selected table for row count')
+      return
+    }
     
+    console.log('🔢 Loading row count for:', selectedTable.name)
     setLoadingRowCount(true)
     setError('')
     try {
       const result = await window.electronAPI.getTableRowCount(selectedTable.name, selectedTable.schema)
       if (result.success) {
+        console.log('✅ Row count loaded:', result.count, 'for table:', selectedTable.name)
         setTableRowCount(result.count)
       } else {
         setError(result.message)
@@ -124,6 +139,7 @@ export function useDatabaseData() {
     setSearchTerm,
     setError,
     setLoading,
+    setTableRowCount,
     loadTables,
     loadTableSchema,
     loadTableData,
