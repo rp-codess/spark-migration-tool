@@ -15,7 +15,11 @@ export default function SchemaDetails({
   onLoadRowCount,
   onLoadTableData,
   onDownloadJSON,
-  onDownloadSQL
+  onDownloadSQL,
+  searchResults,
+  isSearching,
+  onSearch,
+  onClearSearch
 }) {
   return (
     <div className="schema-details">
@@ -122,7 +126,12 @@ export default function SchemaDetails({
             {viewMode === 'data' && (
               <DataTable 
                 tableData={tableData} 
-                loadingTableData={loadingTableData} 
+                loadingTableData={loadingTableData}
+                tableSchema={tableSchema}
+                searchResults={searchResults}
+                isSearching={isSearching}
+                onSearch={onSearch}
+                onClearSearch={onClearSearch}
               />
             )}
           </>

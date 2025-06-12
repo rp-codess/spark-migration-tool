@@ -200,6 +200,16 @@ ipcMain.handle('get-table-data', async (event, tableName, schemaName, limit = 10
   }
 })
 
+ipcMain.handle('search-table-data', async (event, tableName, schemaName, filters) => {
+  console.log('search-table-data handler called for:', tableName, schemaName, 'filters:', filters)
+  try {
+    const data = await DatabaseManager.searchTableData(tableName, schemaName, filters)
+    return { success: true, data }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
 // Additional handlers for Spark operations (placeholders)
 ipcMain.handle('start-spark-job', async (event, jobConfig) => {
   console.log('start-spark-job handler called')

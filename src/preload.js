@@ -24,12 +24,19 @@ const electronAPI = {
   getTableConstraints: (tableName, schemaName) => ipcRenderer.invoke('get-table-constraints', tableName, schemaName),
   getTableForeignKeys: (tableName, schemaName) => ipcRenderer.invoke('get-table-foreign-keys', tableName, schemaName),
   getTableRowCount: (tableName, schemaName) => ipcRenderer.invoke('get-table-row-count', tableName, schemaName),
-  getTableData: (tableName, schemaName, limit) => ipcRenderer.invoke('get-table-data', tableName, schemaName, limit)
+  getTableData: (tableName, schemaName, limit) => ipcRenderer.invoke('get-table-data', tableName, schemaName, limit),
+  searchTableData: (tableName, schemaName, filters) => ipcRenderer.invoke('search-table-data', tableName, schemaName, filters)
 }
 
 console.log('ElectronAPI functions:', Object.keys(electronAPI))
+console.log('searchTableData function type:', typeof electronAPI.searchTableData)
 console.log('saveSchemaToFolder function:', typeof electronAPI.saveSchemaToFolder)
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
 
 console.log('Preload script loaded successfully')
+
+// Debug: Log what's actually exposed
+setTimeout(() => {
+  console.log('Window electronAPI after exposure:', window.electronAPI ? Object.keys(window.electronAPI) : 'undefined')
+}, 1000)

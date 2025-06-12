@@ -25,15 +25,19 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     error,
     searchTerm,
     filteredTables,
+    searchResults,
+    isSearching,
     setViewMode,
     setSearchTerm,
     setError,
     setLoading,
-    setTableRowCount, // Add this line
+    setTableRowCount,
     loadTables,
     loadTableSchema,
     loadTableData,
-    loadTableRowCount
+    loadTableRowCount,
+    searchTableData,
+    clearSearchResults
   } = useDatabaseData()
 
   const {
@@ -167,11 +171,15 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
               loading={loading || sqlDownloadLoading}
               loadingRowCount={loadingRowCount}
               loadingTableData={loadingTableData}
-              onViewModeChange={handleViewModeChange} // Use the enhanced handler
+              searchResults={searchResults}
+              isSearching={isSearching}
+              onViewModeChange={handleViewModeChange}
               onLoadRowCount={loadTableRowCount}
               onLoadTableData={loadTableData}
               onDownloadJSON={handleDownloadTableJSON}
               onDownloadSQL={handleDownloadTableSQL}
+              onSearch={searchTableData}
+              onClearSearch={clearSearchResults}
             />
           </div>
         </div>

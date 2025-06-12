@@ -12,6 +12,8 @@ export function useDatabaseData() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [searchResults, setSearchResults] = useState(null)
+  const [isSearching, setIsSearching] = useState(false)
 
   useEffect(() => {
     loadTables()
@@ -119,6 +121,30 @@ export function useDatabaseData() {
     )
   })
 
+  const searchTableData = async (filters) => {
+    if (!selectedTable || filters.length === 0) return
+    
+    setIsSearching(true)
+    setError('')
+    try {
+      const result = await window.electronAPI.searchTableData(selectedTable.name, selectedTable.schema, filters)
+      if (result.success) {
+        setSearchResults(result.data)
+        console.log('✅ Search completed:', result.data.length, 'results found')
+      } else {
+        setError(result.message)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const clearSearchResults = () => {
+    setSearchResults(null)
+  }
+
   return {
     // State
     tables,
@@ -133,6 +159,8 @@ export function useDatabaseData() {
     error,
     searchTerm,
     filteredTables,
+    searchResults,
+    isSearching,
     
     // Actions
     setViewMode,
@@ -143,6 +171,8 @@ export function useDatabaseData() {
     loadTables,
     loadTableSchema,
     loadTableData,
-    loadTableRowCount
+    loadTableRowCount,
+    searchTableData,
+    clearSearchResults
   }
 }

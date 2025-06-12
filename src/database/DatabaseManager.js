@@ -790,6 +790,153 @@ class DatabaseManager {
     })
   }
 
+  async searchTableData(tableName, schemaName, filters) {
+    if (!this.currentConnection) {
+      throw new Error('No active database connection')
+    }
+
+    const { type } = this.currentConnection
+    switch (type) {
+      case 'mssql':
+        return await this.searchMSSQLTableData(tableName, schemaName, filters)
+      case 'postgresql':
+        return await this.searchPostgreSQLTableData(tableName, schemaName, filters)
+      case 'mysql':
+        return await this.searchMySQLTableData(tableName, schemaName, filters)
+      case 'oracle':
+        return await this.searchOracleTableData(tableName, schemaName, filters)
+      default:
+        throw new Error(`Unsupported database type: ${type}`)
+    }
+  }
+
+  buildWhereClause(filters, dbType = 'mssql') {
+    if (!filters || filters.length === 0) return ''
+    
+    const conditions = filters.map(filter => {
+      const column = dbType === 'mssql' ? `[${filter.column}]` : `"${filter.column}"`
+      const value = filter.value
+      
+      switch (filter.operator) {
+        case 'equals':
+          return `${column} = '${value.replace(/'/g, "''")}'`
+        case 'not_equals':
+          return `${column} != '${value.replace(/'/g, "''")}'`
+        case 'contains':
+          return `${column} LIKE '%${value.replace(/'/g, "''").replace(/%/g, '\\%')}%'`
+        case 'not_contains':
+          return `${column} NOT LIKE '%${value.replace(/'/g, "''").replace(/%/g, '\\%')}%'`
+        case 'starts_with':
+          return `${column} LIKE '${value.replace(/'/g, "''").replace(/%/g, '\\%')}%'`
+        case 'ends_with':
+          return `${column} LIKE '%${value.replace(/'/g, "''").replace(/%/g, '\\%')}'`
+        case 'greater_than':
+          return `${column} > ${this.formatValue(value, filter.dataType)}`
+        case 'less_than':
+          return `${column} < ${this.formatValue(value, filter.dataType)}`
+        case 'greater_equal':
+          return `${column} >= ${this.formatValue(value, filter.dataType)}`
+        case 'less_equal':
+          return `${column} <= ${this.formatValue(value, filter.dataType)}`
+        case 'is_null':
+          return `${column} IS NULL`
+        case 'is_not_null':
+          return `${column} IS NOT NULL`
+        case 'after':
+          return `${column} > '${value}'`
+        case 'before':
+          return `${column} < '${value}'`
+        default:
+          return `${column} = '${value.replace(/'/g, "''")}'`
+      }
+    })
+    
+    return 'WHERE ' + conditions.join(' AND ')
+  }
+
+  formatValue(value, dataType) {
+    if (dataType === 'number') {
+      return value
+    } else if (dataType === 'boolean') {
+      return value === '1' ? '1' : '0'
+    } else {
+      return `'${value.replace(/'/g, "''")}'`
+    }
+  }
+
+  async searchMSSQLTableData(tableName, schemaName, filters) {
+    const { pool } = this.currentConnection
+    const whereClause = this.buildWhereClause(filters, 'mssql')
+    
+    const query = `
+      SELECT TOP 10 *
+      FROM [${schemaName}].[${tableName}]
+      ${whereClause}
+      ORDER BY (SELECT NULL)
+    `
+    
+    console.log('MSSQL Search Query:', query)
+    const result = await pool.request().query(query)
+    return result.recordset
+  }
+
+  async searchPostgreSQLTableData(tableName, schemaName, filters) {
+    const { client } = this.currentConnection
+    const whereClause = this.buildWhereClause(filters, 'postgresql')
+    
+    const query = `
+      SELECT *
+      FROM "${schemaName}"."${tableName}"
+      ${whereClause}
+      LIMIT 10
+    `
+    
+    console.log('PostgreSQL Search Query:', query)
+    const result = await client.query(query)
+    return result.rows
+  }
+
+  async searchMySQLTableData(tableName, schemaName, filters) {
+    const { connection } = this.currentConnection
+    const whereClause = this.buildWhereClause(filters, 'mysql')
+    
+    const query = `
+      SELECT *
+      FROM \`${schemaName}\`.\`${tableName}\`
+      ${whereClause}
+      LIMIT 10
+    `
+    
+    console.log('MySQL Search Query:', query)
+    const [rows] = await connection.execute(query)
+    return rows
+  }
+
+  async searchOracleTableData(tableName, schemaName, filters) {
+    const { connection } = this.currentConnection
+    const whereClause = this.buildWhereClause(filters, 'oracle')
+    
+    const query = `
+      SELECT *
+      FROM "${schemaName}"."${tableName}"
+      ${whereClause}
+      AND ROWNUM <= 10
+    `
+    
+    console.log('Oracle Search Query:', query)
+    const result = await connection.execute(query)
+    
+    // Convert Oracle result format to standard format
+    const columns = result.metaData.map(col => col.name)
+    return result.rows.map(row => {
+      const obj = {}
+      columns.forEach((col, index) => {
+        obj[col] = row[index]
+      })
+      return obj
+    })
+  }
+
   disconnect() {
     if (this.currentConnection) {
       const { type } = this.currentConnection
