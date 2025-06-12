@@ -12,7 +12,8 @@ export default function DashboardHeader({
   onSingleFileDownload,
   onIndividualFilesDownload,
   onSQLDownload,
-  onCancelDownload
+  onCancelDownload,
+  onDownloadTablesList
 }) {
   return (
     <div className="dashboard-header animate-slideInDown">
@@ -56,6 +57,16 @@ export default function DashboardHeader({
             icon={downloading ? '⏳' : '💾'}
           >
             SQL Schemas
+          </Button>
+          
+          <Button
+            onClick={onDownloadTablesList}
+            disabled={downloading || tables.length === 0}
+            variant="info"
+            size="sm"
+            icon={downloading ? '⏳' : '📋'}
+          >
+            Tables List
           </Button>
           
           <Button

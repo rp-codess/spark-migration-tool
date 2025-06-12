@@ -210,6 +210,89 @@ ipcMain.handle('search-table-data', async (event, tableName, schemaName, filters
   }
 })
 
+// Configuration management handlers
+ipcMain.handle('save-config', async (event, config) => {
+  console.log('save-config handler called')
+  try {
+    const configsPath = path.join(os.homedir(), 'Documents', 'SparkMigrationTool', 'configs.json')
+    
+    // Ensure directory exists
+    await fs.promises.mkdir(path.dirname(configsPath), { recursive: true })
+    
+    // Load existing configs
+    let configs = []
+    try {
+      const existingData = await fs.promises.readFile(configsPath, 'utf8')
+      configs = JSON.parse(existingData)
+    } catch (err) {
+      // File doesn't exist, start with empty array
+    }
+    
+    // Add new config with unique ID
+    const newConfig = {
+      ...config,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    }
+    
+    configs.push(newConfig)
+    
+    // Save back to file
+    await fs.promises.writeFile(configsPath, JSON.stringify(configs, null, 2), 'utf8')
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error saving config:', error)
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('get-saved-configs', async (event) => {
+  console.log('get-saved-configs handler called')
+  try {
+    const configsPath = path.join(os.homedir(), 'Documents', 'SparkMigrationTool', 'configs.json')
+    
+    try {
+      const data = await fs.promises.readFile(configsPath, 'utf8')
+      const configs = JSON.parse(data)
+      return { success: true, configs }
+    } catch (err) {
+      // File doesn't exist
+      return { success: true, configs: [] }
+    }
+  } catch (error) {
+    console.error('Error loading configs:', error)
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('delete-config', async (event, configId) => {
+  console.log('delete-config handler called for:', configId)
+  try {
+    const configsPath = path.join(os.homedir(), 'Documents', 'SparkMigrationTool', 'configs.json')
+    
+    // Load existing configs
+    let configs = []
+    try {
+      const existingData = await fs.promises.readFile(configsPath, 'utf8')
+      configs = JSON.parse(existingData)
+    } catch (err) {
+      return { success: false, message: 'No configurations found' }
+    }
+    
+    // Remove config with matching ID
+    configs = configs.filter(config => config.id !== configId)
+    
+    // Save back to file
+    await fs.promises.writeFile(configsPath, JSON.stringify(configs, null, 2), 'utf8')
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting config:', error)
+    return { success: false, message: error.message }
+  }
+})
+
 // Additional handlers for Spark operations (placeholders)
 ipcMain.handle('start-spark-job', async (event, jobConfig) => {
   console.log('start-spark-job handler called')
@@ -224,11 +307,6 @@ ipcMain.handle('get-job-status', async (event, jobId) => {
 ipcMain.handle('select-file', async (event) => {
   console.log('select-file handler called')
   return { success: false, message: 'File selection functionality not implemented yet' }
-})
-
-ipcMain.handle('save-config', async (event, config) => {
-  console.log('save-config handler called')
-  return { success: false, message: 'Config save functionality not implemented yet' }
 })
 
 console.log('IPC handlers registered successfully')

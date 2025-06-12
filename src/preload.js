@@ -13,7 +13,6 @@ const electronAPI = {
   saveSchemaToFile: (data, filename) => ipcRenderer.invoke('save-schema-to-file', data, filename),
   saveSchemaToFolder: (data, folderName, filename) => ipcRenderer.invoke('save-schema-to-folder', data, folderName, filename),
   selectFile: () => ipcRenderer.invoke('select-file'),
-  saveConfig: (config) => ipcRenderer.invoke('save-config', config),
   
   // Spark operations
   startSparkJob: (jobConfig) => ipcRenderer.invoke('start-spark-job', jobConfig),
@@ -25,7 +24,12 @@ const electronAPI = {
   getTableForeignKeys: (tableName, schemaName) => ipcRenderer.invoke('get-table-foreign-keys', tableName, schemaName),
   getTableRowCount: (tableName, schemaName) => ipcRenderer.invoke('get-table-row-count', tableName, schemaName),
   getTableData: (tableName, schemaName, limit) => ipcRenderer.invoke('get-table-data', tableName, schemaName, limit),
-  searchTableData: (tableName, schemaName, filters) => ipcRenderer.invoke('search-table-data', tableName, schemaName, filters)
+  searchTableData: (tableName, schemaName, filters) => ipcRenderer.invoke('search-table-data', tableName, schemaName, filters),
+  
+  // Configuration management
+  saveConfig: (config) => ipcRenderer.invoke('save-config', config),
+  getSavedConfigs: () => ipcRenderer.invoke('get-saved-configs'),
+  deleteConfig: (configId) => ipcRenderer.invoke('delete-config', configId)
 }
 
 console.log('ElectronAPI functions:', Object.keys(electronAPI))

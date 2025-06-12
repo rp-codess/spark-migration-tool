@@ -937,6 +937,183 @@ class DatabaseManager {
     })
   }
 
+  async getTableConstraints(tableName, schemaName) {
+    if (!this.currentConnection) {
+      throw new Error('No active database connection')
+    }
+
+    const { type } = this.currentConnection
+    switch (type) {
+      case 'mssql':
+        return await this.getMSSQLTableConstraints(tableName, schemaName)
+      case 'postgresql':
+        return await this.getPostgreSQLTableConstraints(tableName, schemaName)
+      case 'mysql':
+        return await this.getMySQLTableConstraints(tableName, schemaName)
+      case 'oracle':
+        return await this.getOracleTableConstraints(tableName, schemaName)
+      default:
+        throw new Error(`Unsupported database type: ${type}`)
+    }
+  }
+
+  async getMSSQLTableConstraints(tableName, schemaName) {
+    const { pool } = this.currentConnection
+    const result = await pool.request().query(`
+      SELECT 
+        tc.CONSTRAINT_NAME,
+        tc.CONSTRAINT_TYPE,
+        kcu.COLUMN_NAME
+      FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+      LEFT JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu 
+        ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
+      WHERE tc.TABLE_NAME = '${tableName}' AND tc.TABLE_SCHEMA = '${schemaName}'
+    `)
+    return result.recordset
+  }
+
+  async getPostgreSQLTableConstraints(tableName, schemaName) {
+    const { client } = this.currentConnection
+    const result = await client.query(`
+      SELECT 
+        tc.constraint_name,
+        tc.constraint_type,
+        kcu.column_name
+      FROM information_schema.table_constraints tc
+      LEFT JOIN information_schema.key_column_usage kcu 
+        ON tc.constraint_name = kcu.constraint_name
+      WHERE tc.table_name = $1 AND tc.table_schema = $2
+    `, [tableName, schemaName])
+    return result.rows
+  }
+
+  async getMySQLTableConstraints(tableName, schemaName) {
+    const { connection } = this.currentConnection
+    const [rows] = await connection.execute(`
+      SELECT 
+        tc.CONSTRAINT_NAME,
+        tc.CONSTRAINT_TYPE,
+        kcu.COLUMN_NAME
+      FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+      LEFT JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu 
+        ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
+      WHERE tc.TABLE_NAME = ? AND tc.TABLE_SCHEMA = ?
+    `, [tableName, schemaName])
+    return rows
+  }
+
+  async getOracleTableConstraints(tableName, schemaName) {
+    const { connection } = this.currentConnection
+    const result = await connection.execute(`
+      SELECT 
+        ac.CONSTRAINT_NAME,
+        ac.CONSTRAINT_TYPE,
+        acc.COLUMN_NAME
+      FROM ALL_CONSTRAINTS ac
+      LEFT JOIN ALL_CONS_COLUMNS acc ON ac.CONSTRAINT_NAME = acc.CONSTRAINT_NAME
+      WHERE ac.TABLE_NAME = :tableName AND ac.OWNER = :owner
+    `, [tableName, schemaName])
+    return result.rows.map(row => ({
+      CONSTRAINT_NAME: row[0],
+      CONSTRAINT_TYPE: row[1],
+      COLUMN_NAME: row[2]
+    }))
+  }
+
+  async getTableForeignKeys(tableName, schemaName) {
+    if (!this.currentConnection) {
+      throw new Error('No active database connection')
+    }
+
+    const { type } = this.currentConnection
+    switch (type) {
+      case 'mssql':
+        return await this.getMSSQLTableForeignKeys(tableName, schemaName)
+      case 'postgresql':
+        return await this.getPostgreSQLTableForeignKeys(tableName, schemaName)
+      case 'mysql':
+        return await this.getMySQLTableForeignKeys(tableName, schemaName)
+      case 'oracle':
+        return await this.getOracleTableForeignKeys(tableName, schemaName)
+      default:
+        throw new Error(`Unsupported database type: ${type}`)
+    }
+  }
+
+  async getMSSQLTableForeignKeys(tableName, schemaName) {
+    const { pool } = this.currentConnection
+    const result = await pool.request().query(`
+      SELECT 
+        fk.CONSTRAINT_NAME,
+        fk.COLUMN_NAME,
+        fk.REFERENCED_TABLE_SCHEMA,
+        fk.REFERENCED_TABLE_NAME,
+        fk.REFERENCED_COLUMN_NAME
+      FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc
+      INNER JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE fk 
+        ON rc.CONSTRAINT_NAME = fk.CONSTRAINT_NAME
+      WHERE fk.TABLE_NAME = '${tableName}' AND fk.TABLE_SCHEMA = '${schemaName}'
+    `)
+    return result.recordset
+  }
+
+  async getPostgreSQLTableForeignKeys(tableName, schemaName) {
+    const { client } = this.currentConnection
+    const result = await client.query(`
+      SELECT 
+        kcu.constraint_name,
+        kcu.column_name,
+        ccu.table_schema AS referenced_table_schema,
+        ccu.table_name AS referenced_table_name,
+        ccu.column_name AS referenced_column_name
+      FROM information_schema.key_column_usage kcu
+      JOIN information_schema.constraint_column_usage ccu 
+        ON kcu.constraint_name = ccu.constraint_name
+      WHERE kcu.table_name = $1 AND kcu.table_schema = $2
+    `, [tableName, schemaName])
+    return result.rows
+  }
+
+  async getMySQLTableForeignKeys(tableName, schemaName) {
+    const { connection } = this.currentConnection
+    const [rows] = await connection.execute(`
+      SELECT 
+        kcu.CONSTRAINT_NAME,
+        kcu.COLUMN_NAME,
+        kcu.REFERENCED_TABLE_SCHEMA,
+        kcu.REFERENCED_TABLE_NAME,
+        kcu.REFERENCED_COLUMN_NAME
+      FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+      WHERE kcu.TABLE_NAME = ? AND kcu.TABLE_SCHEMA = ? 
+        AND kcu.REFERENCED_TABLE_NAME IS NOT NULL
+    `, [tableName, schemaName])
+    return rows
+  }
+
+  async getOracleTableForeignKeys(tableName, schemaName) {
+    const { connection } = this.currentConnection
+    const result = await connection.execute(`
+      SELECT 
+        ac.CONSTRAINT_NAME,
+        acc.COLUMN_NAME,
+        r_acc.OWNER AS REFERENCED_TABLE_SCHEMA,
+        r_acc.TABLE_NAME AS REFERENCED_TABLE_NAME,
+        r_acc.COLUMN_NAME AS REFERENCED_COLUMN_NAME
+      FROM ALL_CONSTRAINTS ac
+      JOIN ALL_CONS_COLUMNS acc ON ac.CONSTRAINT_NAME = acc.CONSTRAINT_NAME
+      JOIN ALL_CONS_COLUMNS r_acc ON ac.R_CONSTRAINT_NAME = r_acc.CONSTRAINT_NAME
+      WHERE ac.TABLE_NAME = :tableName AND ac.OWNER = :owner 
+        AND ac.CONSTRAINT_TYPE = 'R'
+    `, [tableName, schemaName])
+    return result.rows.map(row => ({
+      CONSTRAINT_NAME: row[0],
+      COLUMN_NAME: row[1],
+      REFERENCED_TABLE_SCHEMA: row[2],
+      REFERENCED_TABLE_NAME: row[3],
+      REFERENCED_COLUMN_NAME: row[4]
+    }))
+  }
+
   disconnect() {
     if (this.currentConnection) {
       const { type } = this.currentConnection

@@ -91,12 +91,28 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
 
   const handleDownloadTableSQL = async () => {
     try {
-      setSqlDownloadLoading(true) // Use local loading state
+      setSqlDownloadLoading(true)
       await downloadTableSchemaSQL(selectedTable, tableSchema)
     } catch (err) {
       setError(err.message)
     } finally {
-      setSqlDownloadLoading(false) // Use local loading state
+      setSqlDownloadLoading(false)
+    }
+  }
+
+  const handleDownloadTablesList = async () => {
+    try {
+      // Simple array of table names
+      const tableNames = tables.map(table => table.name)
+
+      const result = await window.electronAPI.saveSchemaToFile(tableNames, `${config.database}_tables_list.json`)
+      if (result.success) {
+        alert(`Tables list downloaded successfully!\nSaved to: ${result.filePath}`)
+      } else {
+        setError(result.message)
+      }
+    } catch (err) {
+      setError(err.message)
     }
   }
 
@@ -138,6 +154,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
         onSingleFileDownload={handleSingleFileDownload}
         onIndividualFilesDownload={handleIndividualFilesDownload}
         onSQLDownload={handleSQLDownload}
+        onDownloadTablesList={handleDownloadTablesList}
         onCancelDownload={cancelDownload}
       />
 
