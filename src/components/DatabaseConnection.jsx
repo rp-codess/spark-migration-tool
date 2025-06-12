@@ -25,13 +25,36 @@ export default function DatabaseConnection({ onConnect }) {
   }, [])
 
   const loadSavedConfigs = async () => {
+    let loadedSuccessfully = false;
     try {
-      const result = await window.electronAPI.getSavedConfigs()
-      if (result.success) {
-        setSavedConfigs(result.configs)
+      const result = await window.electronAPI.getSavedConfigs();
+      if (result.success && result.configs && result.configs.length > 0) {
+        setSavedConfigs(result.configs);
+        loadedSuccessfully = true;
+      } else if (result.success && (!result.configs || result.configs.length === 0)) {
+        // API call succeeded but no configs found
+        setSavedConfigs([]); 
+        console.info('No saved configurations found.');
+        // loadedSuccessfully remains false to trigger fallback if desired,
+        // or set to true if empty list is a valid non-fallback state.
+        // Forcing fallback for visibility as per request:
+        loadedSuccessfully = false; 
+      } else {
+        // API call reported failure (result.success is false)
+        console.error('Failed to load saved configs from API:', result.message);
+        loadedSuccessfully = false;
       }
     } catch (err) {
-      console.error('Error loading saved configs:', err)
+      console.error('Error during loadSavedConfigs API call:', err);
+      loadedSuccessfully = false;
+    }
+
+    if (!loadedSuccessfully) {
+      console.warn('Using fallback test data for saved configurations.');
+      setSavedConfigs([
+        { id: 'test1', name: 'Test MSSQL (localhost)', type: 'mssql', host: 'localhost', port: '1433', database: 'testdb_mssql', username: 'sa', ssl: false, sslMode: 'prefer', password: '' },
+        { id: 'test2', name: 'Test PostgreSQL (remote)', type: 'postgresql', host: 'remote.example.com', port: '5432', database: 'testdb_pg', username: 'pguser', ssl: true, sslMode: 'require', password: '' }
+      ]);
     }
   }
 
@@ -176,6 +199,33 @@ export default function DatabaseConnection({ onConnect }) {
           className="form-control"
           placeholder="Database host"
         />
+        {savedConfigs.length > 0 && (
+          <div style={{ marginTop: '8px' }}>
+            <select
+              onChange={(e) => {
+                if (e.target.value) {
+                  const selectedConfig = savedConfigs.find(config => config.id === e.target.value)
+                  if (selectedConfig) {
+                    setConfig({
+                      ...selectedConfig,
+                      password: '' // Clear password for security
+                    })
+                    setConfigName(selectedConfig.name)
+                  }
+                }
+              }}
+              className="form-control"
+              defaultValue=""
+            >
+              <option value="">-- Or select from saved hosts --</option>
+              {savedConfigs.map((savedConfig) => (
+                <option key={savedConfig.id} value={savedConfig.id}>
+                  {savedConfig.host} ({savedConfig.name})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       
       <div className="form-group">
@@ -260,57 +310,91 @@ export default function DatabaseConnection({ onConnect }) {
       )}
       
       <div className="form-actions">
-        {/* Save Connection Section */}
-        <div style={{ 
+        {/* Save Connection Checkbox */}
+        <div className="save-connection-option" style={{ 
           display: 'flex', 
-          flexDirection: 'column', 
-          gap: '12px', 
-          marginBottom: '16px',
+          alignItems: 'center', 
+          gap: '12px',
+          marginBottom: '20px',
           padding: '16px',
-          background: 'var(--bg-secondary)',
+          backgroundColor: 'var(--bg-tertiary, #f5f5f5)',
           borderRadius: '8px',
-          border: '1px solid var(--border-color)'
+          border: '1px solid var(--border-color)',
+          minHeight: '50px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              type="checkbox"
-              id="saveConnection"
-              checked={saveConnection}
-              onChange={(e) => setSaveConnection(e.target.checked)}
-              style={{ margin: 0 }}
-            />
-            <label htmlFor="saveConnection" style={{ margin: 0, fontSize: '14px', fontWeight: '500' }}>
-              Save this connection for future use
-            </label>
-          </div>
-          
-          {saveConnection && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input
-                type="text"
-                value={configName}
-                onChange={(e) => setConfigName(e.target.value)}
-                placeholder="Enter connection name..."
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}
-              />
-              <Button
-                onClick={handleSaveConfig}
-                disabled={!configName.trim() || loading}
-                variant="success"
-                size="sm"
-                icon="💾"
-              >
-                Save Now
-              </Button>
-            </div>
-          )}
+          <input
+            type="checkbox"
+            id="saveConnection"
+            checked={saveConnection}
+            onChange={(e) => setSaveConnection(e.target.checked)}
+            style={{ 
+              margin: 0, 
+              width: '20px', 
+              height: '20px',
+              accentColor: 'var(--color-primary, #007bff)'
+            }}
+          />
+          <label htmlFor="saveConnection" style={{ 
+            margin: 0, 
+            fontSize: '16px', 
+            fontWeight: '600', 
+            cursor: 'pointer',
+            color: 'var(--text-primary, #333)'
+          }}>
+            Save this connection for future use
+          </label>
         </div>
+
+        {/* Connection Name Input - Show when save checkbox is checked */}
+        {saveConnection && (
+          <div style={{ 
+            display: 'flex', 
+            gap: '8px', 
+            alignItems: 'center', 
+            marginBottom: '16px',
+            padding: '12px',
+            background: 'var(--bg-tertiary, #f0f0f0)',
+            borderRadius: '8px',
+            border: '1px solid var(--border-color)'
+          }}>
+            <input
+              type="text"
+              value={configName}
+              onChange={(e) => setConfigName(e.target.value)}
+              placeholder="Enter connection name..."
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                border: '1px solid var(--border-color)',
+                borderRadius: '4px',
+                fontSize: '14px'
+              }}
+            />
+            <Button
+              onClick={handleSaveConfig}
+              disabled={!configName.trim() || loading}
+              variant="success"
+              size="sm"
+              icon="💾"
+            >
+              Save Now
+            </Button>
+          </div>
+        )}
+
+        {/* Manage Saved Connections Button */}
+        {savedConfigs.length > 0 && (
+          <div style={{ marginBottom: '16px' }}>
+            <Button
+              onClick={() => setShowSavedConfigs(!showSavedConfigs)}
+              variant="info"
+              size="sm"
+              icon="📂"
+            >
+              {showSavedConfigs ? 'Hide' : 'Manage'} Saved Connections
+            </Button>
+          </div>
+        )}
 
         {showSavedConfigs && (
           <div style={{
