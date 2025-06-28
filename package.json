@@ -2,13 +2,13 @@
   "name": "spark-migration-tool",
   "version": "1.0.0",
 
-  "main": "src/main.js",
-  "scripts": {
+  "main": "src/main.js",  "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "electron": "electron .",
-    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron-dev": "concurrently \"yarn dev\" \"wait-on http://localhost:5173 && yarn electron\"",
+    "electron-dev-separate": "start \"Vite Dev\" cmd /k \"yarn dev\" && timeout /t 5 && yarn electron",
     "build-electron": "npm run build && electron-builder",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
