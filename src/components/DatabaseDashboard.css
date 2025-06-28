@@ -1,15 +1,4 @@
-/* TARGETED HORIZONTAL SCROLLING FIXES */
-.database-dashboard {
-  overflow-x: auto !important;
-}
-
-.main-content {
-  overflow-x: auto !important;
-}
-
-.schema-content {
-  overflow-x: auto !important;
-}
+/* TARGETED HORIZONTAL SCROLLING FIXES - SPECIFIC CONTAINERS ONLY */
 
 /* Table scrolling container specific */
 .table-scroll-container {

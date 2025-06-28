@@ -47,7 +47,6 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  overflow-x: auto !important;
 }
 
 html, body {
@@ -178,12 +177,7 @@ body {
   border-collapse: collapse;
 }
 
-/* HORIZONTAL SCROLL FIX - TARGETED OVERRIDES */
-body, html, #root, .app {
-  overflow-x: auto !important;
-}
-
-/* Specific overrides for table containers only */
+/* HORIZONTAL SCROLL FIX - TARGETED OVERRIDES FOR MAIN CONTAINERS ONLY */
 .database-dashboard, .main-content, .schema-content,
 .explorer-layout, .explorer-card, .table-scroll-container {
   overflow-x: auto !important;
@@ -194,4 +188,19 @@ body, html, #root, .app {
   width: max-content !important;
   min-width: 100% !important;
   table-layout: auto !important;
+}
+
+/* Button overflow fixes - prevent scrollbars on buttons */
+button, .btn, [role="button"] {
+  overflow: visible !important;
+}
+
+/* Prevent scrollbars on inline elements and small UI components */
+span, em, strong, small, code, .badge, .tag, .chip {
+  overflow: visible !important;
+}
+
+/* Count/stat elements should not have scrollbars */
+.count, .stat, .metric, .stats-card, .card-header, .card-title {
+  overflow: visible !important;
 }
