@@ -105,7 +105,7 @@ export default function DashboardHeader({
   ]
 
   return (
-    <div className="dashboard-header animate-slideInDown">
+    <div className="dashboard-header">
       <div className="header-content">
         <div className="header-info">
           <h1 className="header-title">

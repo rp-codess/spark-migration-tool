@@ -433,7 +433,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
   }, [setViewMode])
 
   return (
-    <div className="database-dashboard animate-fadeIn">
+    <div className="database-dashboard">{/* Removed animate-fadeIn to prevent interference */}
       <DashboardHeader
         config={config}
         onDisconnect={onDisconnect}
