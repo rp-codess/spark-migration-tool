@@ -56,7 +56,7 @@ export default memo(function TablesSidebar({
             onClick={onRefresh} 
             disabled={loading}
           >
-            {loading ? <Loader size="small" text="" spinning={true} /> : '↻'} 
+            {loading ? <Loader size="small" text="" inline={true} /> : '↻'} 
             {!loading && ' Refresh'}
           </button>
         </div>

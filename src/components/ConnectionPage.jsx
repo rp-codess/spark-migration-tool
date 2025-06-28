@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { DatabaseOutlined, FolderOpenOutlined, LockOutlined, CloudOutlined, CloseCircleOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import Button from './ui/Button'
 import ThemeToggle from './ui/ThemeToggle'
 import SavedConnectionsModal from './SavedConnectionsModal'
@@ -147,7 +148,7 @@ export default function ConnectionPage({ onConnect }) {
             onClick={() => setShowSavedConnections(true)}
             variant="outline"
             size="sm"
-            icon="📁"
+            icon={<FolderOpenOutlined />}
           >
             View Saved Connections
           </Button>
@@ -166,7 +167,7 @@ export default function ConnectionPage({ onConnect }) {
             alignItems: 'center',
             gap: '8px'
           }}>
-            ✅ {successMessage}
+            <CheckCircleOutlined /> {successMessage}
           </div>
         )}
 
@@ -263,7 +264,7 @@ export default function ConnectionPage({ onConnect }) {
               alignItems: 'center',
               gap: '8px'
             }}>
-              🔒 Azure database detected - SSL automatically enabled
+              <LockOutlined /> Azure database detected - SSL automatically enabled
             </div>
           )}
 
@@ -288,10 +289,14 @@ export default function ConnectionPage({ onConnect }) {
                 backgroundColor: '#e3f2fd', 
                 border: '1px solid #1976d2', 
                 borderRadius: '6px',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                justifyContent: 'center'
               }}
             >
-              Load Sample Azure SQL
+              <CloudOutlined /> Load Sample Azure SQL
             </button>
           </div>
 
@@ -301,9 +306,9 @@ export default function ConnectionPage({ onConnect }) {
             loading={connecting}
             size="lg"
             style={{ marginTop: '8px' }}
-            icon="🚀"
+            icon={<DatabaseOutlined />}
           >
-            Connect to Database
+            {connecting ? 'Connecting...' : 'Connect to Database'}
           </Button>
 
           {error && (
@@ -312,9 +317,12 @@ export default function ConnectionPage({ onConnect }) {
               backgroundColor: 'var(--color-danger)',
               color: 'white', 
               borderRadius: '8px',
-              fontSize: '14px'
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}>
-              ❌ {error}
+              <CloseCircleOutlined /> {error}
             </div>
           )}
 

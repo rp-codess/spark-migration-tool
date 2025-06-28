@@ -39,8 +39,3 @@ console.log('saveSchemaToFolder function:', typeof electronAPI.saveSchemaToFolde
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
 
 console.log('Preload script loaded successfully')
-
-// Debug: Log what's actually exposed
-setTimeout(() => {
-  console.log('Window electronAPI after exposure:', window.electronAPI ? Object.keys(window.electronAPI) : 'undefined')
-}, 1000)

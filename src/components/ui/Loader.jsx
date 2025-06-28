@@ -10,6 +10,7 @@ const Loader = ({
   children,
   overlay = false,
   fullscreen = false,
+  inline = false,
   delay = 0
 }) => {
   // Custom spinning icon
@@ -45,6 +46,21 @@ const Loader = ({
             {children}
           </div>
         </Spin>
+      </div>
+    )
+  }
+
+  // Inline loader (for buttons, etc)
+  if (inline) {
+    return (
+      <div className="loader-inline-compact">
+        <Spin 
+          indicator={spinIcon} 
+          size={size} 
+          spinning={spinning}
+          delay={delay}
+        />
+        {text && <span className="loader-text-compact">{text}</span>}
       </div>
     )
   }

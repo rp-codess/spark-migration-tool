@@ -130,79 +130,123 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
   const [emptyTablesCancelled, setEmptyTablesCancelled] = useState(false)
   const rowCountCancelledRef = useRef(false)
   const emptyTablesCancelledRef = useRef(false)
+  const rowCountAbortControllerRef = useRef(null)
+  const emptyTablesAbortControllerRef = useRef(null)
 
   const cancelRowCountDownload = useCallback(() => {
+    console.log('🛑 CANCELLING row count download immediately...')
     setRowCountCancelled(true)
     rowCountCancelledRef.current = true
+    if (rowCountAbortControllerRef.current) {
+      rowCountAbortControllerRef.current.abort()
+    }
+    // Immediately reset UI state
+    setLoading(false)
+    setRowCountProgress({ current: 0, total: 0 })
+    console.log('✅ Row count download cancelled and UI reset')
   }, [])
 
   const cancelEmptyTablesDownload = useCallback(() => {
+    console.log('🛑 CANCELLING empty tables download immediately...')
     setEmptyTablesCancelled(true)
     emptyTablesCancelledRef.current = true
+    if (emptyTablesAbortControllerRef.current) {
+      emptyTablesAbortControllerRef.current.abort()
+    }
+    // Immediately reset UI state
+    setLoading(false)
+    setEmptyTablesProgress({ current: 0, total: 0 })
+    console.log('✅ Empty tables download cancelled and UI reset')
   }, [])
 
   const handleDownloadTablesWithRowCount = useCallback(async () => {
+    // Prevent multiple instances
+    if (downloading || loading || rowCountProgress.total > 0) {
+      console.log('⚠️ Row count download already in progress')
+      return
+    }
+
+    let currentAbortController = null
     try {
       console.log('🔄 Starting tables with row count download...')
       setLoading(true)
       setRowCountCancelled(false)
       rowCountCancelledRef.current = false
+      currentAbortController = new AbortController()
+      rowCountAbortControllerRef.current = currentAbortController
       setRowCountProgress({ current: 0, total: tables.length })
       
       const tablesWithRowCount = []
-      const batchSize = 10 // Process 10 tables at a time
+      const batchSize = 5 // Reduced batch size for better cancellation response
       
       for (let i = 0; i < tables.length; i += batchSize) {
-        if (rowCountCancelledRef.current) {
+        // Check for cancellation at the start of each batch
+        if (rowCountCancelledRef.current || currentAbortController.signal.aborted) {
           console.log('❌ Row count download cancelled by user')
-          alert('Row count download cancelled by user')
-          return
+          return // Early exit
         }
 
         const batch = tables.slice(i, i + batchSize)
         console.log(`🔄 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(tables.length/batchSize)} (${batch.length} tables)`)
         
-        // Process batch in parallel
-        const batchPromises = batch.map(async (table) => {
+        // Process batch sequentially for better cancellation control
+        for (const table of batch) {
+          if (rowCountCancelledRef.current || currentAbortController.signal.aborted) {
+            console.log('❌ Row count download cancelled during batch processing')
+            return // Early exit
+          }
+
           try {
-            if (rowCountCancelledRef.current) return null
-            
             console.log(`📊 Getting row count for ${table.schema}.${table.name}`)
             const rowCountResult = await window.electronAPI.getTableRowCount(table.name, table.schema)
-            return {
+            
+            // Check again after async operation
+            if (rowCountCancelledRef.current || currentAbortController.signal.aborted) {
+              console.log('❌ Row count download cancelled after database operation')
+              return // Early exit
+            }
+            
+            tablesWithRowCount.push({
               schema: table.schema,
               name: table.name,
               fullName: `${table.schema}.${table.name}`,
               rowCount: rowCountResult.success ? rowCountResult.count : 'Error'
-            }
+            })
           } catch (err) {
+            if (rowCountCancelledRef.current || currentAbortController.signal.aborted) {
+              console.log('❌ Row count download cancelled during error handling')
+              return // Early exit
+            }
             console.error(`❌ Error getting row count for ${table.schema}.${table.name}:`, err)
-            return {
+            tablesWithRowCount.push({
               schema: table.schema,
               name: table.name,
               fullName: `${table.schema}.${table.name}`,
               rowCount: 'Error'
-            }
+            })
           }
-        })
-        
-        const batchResults = await Promise.all(batchPromises)
-        const validResults = batchResults.filter(result => result !== null)
-        tablesWithRowCount.push(...validResults)
+        }
         
         // Update progress
         setRowCountProgress({ current: Math.min(i + batchSize, tables.length), total: tables.length })
         console.log(`✅ Completed batch ${Math.floor(i/batchSize) + 1}, total processed: ${tablesWithRowCount.length}`)
         
-        // Small delay between batches to prevent overwhelming the database
-        if (i + batchSize < tables.length && !rowCountCancelledRef.current) {
-          await new Promise(resolve => setTimeout(resolve, 100))
+        // Small delay between batches to prevent overwhelming the database and allow cancellation
+        if (i + batchSize < tables.length) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+          
+          // Check for cancellation after delay
+          if (rowCountCancelledRef.current || currentAbortController.signal.aborted) {
+            console.log('❌ Row count download cancelled after batch delay')
+            return // Early exit
+          }
         }
       }
 
-      if (rowCountCancelledRef.current) {
-        console.log('❌ Row count download cancelled by user')
-        return
+      // Final check before creating file
+      if (rowCountCancelledRef.current || currentAbortController.signal.aborted) {
+        console.log('❌ Row count download cancelled before file creation')
+        return // Early exit
       }
       
       console.log('📝 Creating CSV content...')
@@ -212,6 +256,12 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
       console.log('💾 Saving CSV file to Documents/SparkMigrationTool...')
       const result = await window.electronAPI.saveSchemaToFile(csvContent, 'database-tables-with-rowcount.csv')
       
+      // Final check before showing success
+      if (rowCountCancelledRef.current || currentAbortController.signal.aborted) {
+        console.log('❌ Row count download cancelled before showing result')
+        return // Early exit
+      }
+      
       if (result.success) {
         console.log('✅ Tables with row count download completed!')
         alert(`CSV file saved successfully to: ${result.filePath}`)
@@ -219,6 +269,10 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
         throw new Error(result.error || 'Failed to save CSV file')
       }
     } catch (err) {
+      if (rowCountCancelledRef.current || currentAbortController?.signal.aborted) {
+        console.log('❌ Row count download cancelled in catch block')
+        return // Early exit
+      }
       console.error('❌ Error in handleDownloadTablesWithRowCount:', err)
       setError(err.message)
     } finally {
@@ -226,69 +280,94 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
       setRowCountProgress({ current: 0, total: 0 })
       setRowCountCancelled(false)
       rowCountCancelledRef.current = false
+      rowCountAbortControllerRef.current = null
     }
-  }, [tables, setError, setLoading])
+  }, [tables, setError, setLoading, loading, downloading, rowCountProgress.total])
 
   const handleDownloadEmptyTablesJSON = useCallback(async () => {
+    // Prevent multiple instances
+    if (downloading || loading || emptyTablesProgress.total > 0) {
+      console.log('⚠️ Empty tables download already in progress')
+      return
+    }
+
+    let currentAbortController = null
     try {
       console.log('🔄 Starting empty tables list download...')
       setLoading(true)
       setEmptyTablesCancelled(false)
       emptyTablesCancelledRef.current = false
+      currentAbortController = new AbortController()
+      emptyTablesAbortControllerRef.current = currentAbortController
       setEmptyTablesProgress({ current: 0, total: tables.length })
       
       const emptyTables = []
-      const batchSize = 10 // Process 10 tables at a time
+      const batchSize = 5 // Reduced batch size for better cancellation response
       
       for (let i = 0; i < tables.length; i += batchSize) {
-        if (emptyTablesCancelledRef.current) {
+        // Check for cancellation at the start of each batch
+        if (emptyTablesCancelledRef.current || currentAbortController.signal.aborted) {
           console.log('❌ Empty tables download cancelled by user')
-          alert('Empty tables download cancelled by user')
-          return
+          return // Early exit
         }
 
         const batch = tables.slice(i, i + batchSize)
         console.log(`🔄 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(tables.length/batchSize)} (${batch.length} tables)`)
         
-        // Process batch in parallel
-        const batchPromises = batch.map(async (table) => {
+        // Process batch sequentially for better cancellation control
+        for (const table of batch) {
+          if (emptyTablesCancelledRef.current || currentAbortController.signal.aborted) {
+            console.log('❌ Empty tables download cancelled during batch processing')
+            return // Early exit
+          }
+
           try {
-            if (emptyTablesCancelledRef.current) return null
-            
             console.log(`📊 Checking row count for ${table.schema}.${table.name}`)
             const rowCountResult = await window.electronAPI.getTableRowCount(table.name, table.schema)
+            
+            // Check again after async operation
+            if (emptyTablesCancelledRef.current || currentAbortController.signal.aborted) {
+              console.log('❌ Empty tables download cancelled after database operation')
+              return // Early exit
+            }
+            
             if (rowCountResult.success && rowCountResult.count === 0) {
               console.log(`🔍 Found empty table: ${table.schema}.${table.name}`)
-              return {
+              emptyTables.push({
                 schema: table.schema,
                 name: table.name,
                 fullName: `${table.schema}.${table.name}`
-              }
+              })
             }
-            return null
           } catch (err) {
+            if (emptyTablesCancelledRef.current || currentAbortController.signal.aborted) {
+              console.log('❌ Empty tables download cancelled during error handling')
+              return // Early exit
+            }
             console.error(`❌ Error checking row count for ${table.schema}.${table.name}:`, err)
-            return null
           }
-        })
-        
-        const batchResults = await Promise.all(batchPromises)
-        const batchEmptyTables = batchResults.filter(result => result !== null)
-        emptyTables.push(...batchEmptyTables)
+        }
         
         // Update progress
         setEmptyTablesProgress({ current: Math.min(i + batchSize, tables.length), total: tables.length })
-        console.log(`✅ Completed batch ${Math.floor(i/batchSize) + 1}, found ${batchEmptyTables.length} empty tables in this batch, total empty: ${emptyTables.length}`)
+        console.log(`✅ Completed batch ${Math.floor(i/batchSize) + 1}, found ${emptyTables.length} empty tables so far`)
         
-        // Small delay between batches to prevent overwhelming the database
-        if (i + batchSize < tables.length && !emptyTablesCancelledRef.current) {
-          await new Promise(resolve => setTimeout(resolve, 100))
+        // Small delay between batches to prevent overwhelming the database and allow cancellation
+        if (i + batchSize < tables.length) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+          
+          // Check for cancellation after delay
+          if (emptyTablesCancelledRef.current || currentAbortController.signal.aborted) {
+            console.log('❌ Empty tables download cancelled after batch delay')
+            return // Early exit
+          }
         }
       }
 
-      if (emptyTablesCancelledRef.current) {
-        console.log('❌ Empty tables download cancelled by user')
-        return
+      // Final check before creating file
+      if (emptyTablesCancelledRef.current || currentAbortController.signal.aborted) {
+        console.log('❌ Empty tables download cancelled before file creation')
+        return // Early exit
       }
       
       console.log(`📝 Creating JSON content with ${emptyTables.length} empty tables...`)
@@ -306,6 +385,12 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
       console.log('💾 Saving JSON file to Documents/SparkMigrationTool...')
       const result = await window.electronAPI.saveSchemaToFile(jsonContent, 'database-empty-tables-list.json')
       
+      // Final check before showing success
+      if (emptyTablesCancelledRef.current || currentAbortController.signal.aborted) {
+        console.log('❌ Empty tables download cancelled before showing result')
+        return // Early exit
+      }
+      
       if (result.success) {
         console.log('✅ Empty tables list download completed!')
         alert(`JSON file saved successfully to: ${result.filePath}`)
@@ -313,6 +398,10 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
         throw new Error(result.error || 'Failed to save JSON file')
       }
     } catch (err) {
+      if (emptyTablesCancelledRef.current || currentAbortController?.signal.aborted) {
+        console.log('❌ Empty tables download cancelled in catch block')
+        return // Early exit
+      }
       console.error('❌ Error in handleDownloadEmptyTablesJSON:', err)
       setError(err.message)
     } finally {
@@ -320,8 +409,9 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
       setEmptyTablesProgress({ current: 0, total: 0 })
       setEmptyTablesCancelled(false)
       emptyTablesCancelledRef.current = false
+      emptyTablesAbortControllerRef.current = null
     }
-  }, [tables, config, setError, setLoading])
+  }, [tables, config, setError, setLoading, loading, downloading, emptyTablesProgress.total])
 
   // Auto-load row count when a table is selected
   useEffect(() => {

@@ -57,8 +57,21 @@
   padding: 20px;
 }
 
+.loader-inline-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
 .loader-text-inline {
   font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.loader-text-compact {
+  font-size: 12px;
   color: #666;
   font-weight: 500;
 }

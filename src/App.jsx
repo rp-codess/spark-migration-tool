@@ -9,6 +9,17 @@ import DatabaseDashboard from './components/DatabaseDashboard'
 // import performanceMonitor, { optimizeForSlowDevices } from './utils/performanceMonitor'
 import './styles/globals.css'
 
+// Suppress Ant Design React 19 compatibility warning
+if (typeof console !== 'undefined') {
+  const originalWarn = console.warn
+  console.warn = (...args) => {
+    if (typeof args[0] === 'string' && args[0].includes('[antd: compatible]')) {
+      return // Suppress this specific warning
+    }
+    originalWarn.apply(console, args)
+  }
+}
+
 function App() {
   const [currentPage, setCurrentPage] = useState('connection')
   const [dbConfig, setDbConfig] = useState(null)
