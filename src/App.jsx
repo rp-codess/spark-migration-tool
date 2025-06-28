@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
+import 'antd/dist/reset.css'
 import ThemeProvider from './components/ui/ThemeProvider'
 import ErrorBoundary from './components/ErrorBoundary'
 import Router, { Page } from './components/Router'

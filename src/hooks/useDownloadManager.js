@@ -41,7 +41,7 @@ export function useDownloadManager(config = {}) {
       const allSchemas = {}
       
       for (let i = 0; i < tables.length; i++) {
-        if (cancelledRef.current || abortControllerRef.current.signal.aborted) {
+        if (cancelledRef.current || (abortControllerRef.current && abortControllerRef.current.signal.aborted)) {
           console.log('Download cancelled at table', i)
           alert('Download cancelled by user')
           return
@@ -134,7 +134,7 @@ export function useDownloadManager(config = {}) {
       let errors = []
 
       for (let i = 0; i < tables.length; i++) {
-        if (cancelledRef.current || abortControllerRef.current.signal.aborted) {
+        if (cancelledRef.current || (abortControllerRef.current && abortControllerRef.current.signal.aborted)) {
           console.log('Download cancelled at table', i)
           alert(`Download cancelled by user.\nDownloaded ${successCount}/${tables.length} files before cancellation.`)
           return
@@ -226,7 +226,7 @@ export function useDownloadManager(config = {}) {
       let errors = []
 
       for (let i = 0; i < tables.length; i++) {
-        if (cancelledRef.current || abortControllerRef.current.signal.aborted) {
+        if (cancelledRef.current || (abortControllerRef.current && abortControllerRef.current.signal.aborted)) {
           console.log('Download cancelled at table', i)
           alert(`SQL download cancelled by user.\nDownloaded ${successCount}/${tables.length} files before cancellation.`)
           return

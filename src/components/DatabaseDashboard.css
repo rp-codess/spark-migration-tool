@@ -47,7 +47,9 @@
   box-shadow: var(--shadow-lg);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .header-content {
@@ -83,6 +85,56 @@
   align-items: center;
   flex-wrap: wrap;
   min-width: 0;
+}
+
+/* Ant Design Integration Styles */
+.header-actions .ant-btn {
+  height: 36px;
+  border-radius: 6px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-actions .ant-dropdown-trigger {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.header-actions .ant-dropdown-trigger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+/* Custom dropdown menu styling */
+.ant-dropdown-menu {
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ant-dropdown-menu-item {
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 2px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ant-dropdown-menu-item:hover {
+  background: rgba(24, 144, 255, 0.1);
+}
+
+.ant-dropdown-menu-item-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ant-dropdown-menu-item-disabled:hover {
+  background: transparent;
 }
 
 .download-dropdown {

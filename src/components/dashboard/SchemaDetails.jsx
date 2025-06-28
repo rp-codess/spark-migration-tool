@@ -1,5 +1,14 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
-import Button from '../ui/Button'
+import { Button, Dropdown } from 'antd'
+import { 
+  SettingOutlined,
+  NumberOutlined,
+  EyeOutlined,
+  BugOutlined,
+  DownloadOutlined,
+  DatabaseOutlined
+} from '@ant-design/icons'
+import CustomButton from '../ui/Button'
 import SchemaTable from './SchemaTable'
 import DataTable from './DataTable'
 
@@ -181,62 +190,90 @@ export default function SchemaDetails({
         
         {selectedTable && tableSchema.length > 0 && (
           <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-            <Button
-              onClick={onLoadRowCount}
-              disabled={loadingRowCount}
-              variant="info"
-              icon={loadingRowCount ? '⏳' : '🔢'}
-              size="sm"
-              loading={loadingRowCount}
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'count-rows',
+                    label: (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <NumberOutlined />
+                        <span>Count Rows</span>
+                      </span>
+                    ),
+                    onClick: onLoadRowCount,
+                    disabled: loadingRowCount
+                  },
+                  {
+                    key: 'show-top-100',
+                    label: (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <EyeOutlined />
+                        <span>Show Top 100</span>
+                      </span>
+                    ),
+                    onClick: onLoadTableData,
+                    disabled: loadingTableData
+                  },
+                  ...(process.env.NODE_ENV === 'development' ? [{
+                    key: 'debug-load',
+                    label: (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <BugOutlined />
+                        <span>Debug Load</span>
+                      </span>
+                    ),
+                    onClick: () => {
+                      console.log('🐛 Debug button clicked')
+                      console.log('🐛 Selected table:', selectedTable)
+                      console.log('🐛 Table data:', tableData)
+                      console.log('🐛 Loading state:', loadingTableData)
+                      onLoadTableData()
+                    }
+                  }] : []),
+                  {
+                    type: 'divider'
+                  },
+                  {
+                    key: 'download-json',
+                    label: (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <DownloadOutlined />
+                        <span>Download JSON</span>
+                      </span>
+                    ),
+                    onClick: onDownloadJSON
+                  },
+                  {
+                    key: 'download-sql',
+                    label: (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <DatabaseOutlined />
+                        <span>Download SQL</span>
+                      </span>
+                    ),
+                    onClick: onDownloadSQL
+                  }
+                ],
+                onClick: ({ key }) => {
+                  // Handle clicks through the menu items themselves
+                }
+              }}
+              placement="bottomLeft"
             >
-              Count Rows
-            </Button>
-            
-            <Button
-              onClick={onLoadTableData}
-              disabled={loadingTableData}
-              variant="warning"
-              icon={loadingTableData ? '⏳' : '👁️'}
-              size="sm"
-              loading={loadingTableData}
-            >
-              {loadingTableData ? 'Loading...' : 'Show Top 100'}
-            </Button>
-            
-            {/* Debug button - only show in development */}
-            {process.env.NODE_ENV === 'development' && (
               <Button
-                onClick={() => {
-                  console.log('🐛 Debug button clicked')
-                  console.log('🐛 Selected table:', selectedTable)
-                  console.log('🐛 Table data:', tableData)
-                  console.log('🐛 Loading state:', loadingTableData)
-                  onLoadTableData()
+                type="default"
+                icon={<SettingOutlined />}
+                loading={loadingRowCount || loadingTableData}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
                 }}
-                variant="danger"
-                icon="🐛"
-                size="sm"
               >
-                Debug Load
+                Table Actions
               </Button>
-            )}
-            
-            <Button
-              onClick={onDownloadJSON}
-              variant="success"
-              icon="📥"
-              size="sm"
-            >
-              JSON
-            </Button>
-            <Button
-              onClick={onDownloadSQL}
-              variant="primary"
-              icon="💾"
-              size="sm"
-            >
-              SQL
-            </Button>
+            </Dropdown>
           </div>
         )}
       </div>
