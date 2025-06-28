@@ -88,30 +88,27 @@ export default function DataTable({
           )}
 
           {/* HORIZONTAL SCROLLABLE TABLE CONTAINER */}
-          <div style={{ 
-            width: '100%',
-            overflowX: 'auto',
-            overflowY: 'auto',
+          <div className="table-scroll-container" style={{ 
             maxHeight: '500px',
             border: '2px solid var(--border-color)',
             borderRadius: '8px',
-            backgroundColor: 'var(--bg-primary)',
-            WebkitOverflowScrolling: 'touch',
-            scrollbarWidth: 'thin'
+            backgroundColor: 'var(--bg-primary)'
           }}>
             <table style={{
-              width: 'max-content',
+              width: 'max-content', /* Allow table to expand beyond container width */
               minWidth: '100%',
               borderCollapse: 'collapse',
               fontSize: '14px',
-              backgroundColor: 'var(--bg-primary)'
+              backgroundColor: 'var(--bg-primary)',
+              tableLayout: 'auto' /* Allow columns to size naturally */
             }}>
               <thead>
                 <tr style={{ backgroundColor: 'var(--bg-secondary)' }}>
                   {Object.keys(displayData[0]).map((column, index) => (
                     <th key={index} style={{ 
-                      minWidth: '200px',
-                      width: '200px',
+                      minWidth: '150px', /* Reduce min width */
+                      maxWidth: '300px', /* Add max width */
+                      width: 'auto', /* Allow natural sizing */
                       padding: '12px 16px',
                       textAlign: 'left',
                       fontWeight: '600',
@@ -123,7 +120,9 @@ export default function DataTable({
                       backgroundColor: 'var(--bg-secondary)',
                       color: 'var(--text-primary)',
                       zIndex: 10,
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
                     }}>
                       {column}
                     </th>
@@ -137,8 +136,9 @@ export default function DataTable({
                   }}>
                     {Object.values(row).map((value, colIndex) => (
                       <td key={colIndex} style={{ 
-                        minWidth: '200px',
-                        width: '200px',
+                        minWidth: '150px', /* Match header min width */
+                        maxWidth: '300px', /* Match header max width */
+                        width: 'auto', /* Allow natural sizing */
                         padding: '8px 16px',
                         borderBottom: '1px solid var(--border-color)',
                         borderRight: '1px solid var(--border-color)',
@@ -146,8 +146,7 @@ export default function DataTable({
                         color: 'var(--text-primary)',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        maxWidth: '200px'
+                        textOverflow: 'ellipsis'
                       }}>
                         {value === null ? (
                           <span style={{ 

@@ -5,33 +5,19 @@ import ErrorBoundary from './components/ErrorBoundary'
 import Router, { Page } from './components/Router'
 import ConnectionPage from './components/ConnectionPage'
 import DatabaseDashboard from './components/DatabaseDashboard'
-import performanceMonitor, { optimizeForSlowDevices } from './utils/performanceMonitor'
+// import performanceMonitor, { optimizeForSlowDevices } from './utils/performanceMonitor'
 import './styles/globals.css'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('connection')
   const [dbConfig, setDbConfig] = useState(null)
 
-  // Initialize performance monitoring and optimizations
+  // Initialize optimizations
   useEffect(() => {
-    // Apply optimizations for slow devices
-    optimizeForSlowDevices()
-    
-    // Start performance monitoring in development
-    if (process.env.NODE_ENV === 'development') {
-      performanceMonitor.startMonitoring()
-      
-      // Log performance report every 10 seconds
-      const reportInterval = setInterval(() => {
-        const report = performanceMonitor.getPerformanceReport()
-        console.log('📊 Performance Report:', report)
-      }, 10000)
-      
-      // Cleanup on unmount
-      return () => {
-        clearInterval(reportInterval)
-        performanceMonitor.stopMonitoring()
-      }
+    // Basic optimizations without heavy monitoring
+    if (typeof window !== 'undefined') {
+      // Reduce animation duration for better performance
+      document.documentElement.style.setProperty('--animation-duration', '0.15s')
     }
   }, [])
 
