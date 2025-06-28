@@ -1,6 +1,35 @@
+/* TARGETED HORIZONTAL SCROLLING FIXES */
+.database-dashboard {
+  overflow-x: auto !important;
+}
+
+.main-content {
+  overflow-x: auto !important;
+}
+
+.schema-content {
+  overflow-x: auto !important;
+}
+
+/* Table scrolling container specific */
+.table-scroll-container {
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.table-scroll-container table {
+  min-width: max-content !important;
+  width: auto !important;
+  table-layout: auto !important;
+}
+
 .database-dashboard {
   min-height: 100vh;
   background-color: var(--bg-secondary);
+  overflow-x: auto;
+  width: 100%;
 }
 
 .dashboard-header {
@@ -19,6 +48,8 @@
   align-items: center;
   max-width: 1200px;
   margin: 0 auto;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .header-info {
@@ -42,6 +73,8 @@
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .download-dropdown {
@@ -58,8 +91,11 @@
   box-shadow: var(--shadow-lg);
   z-index: 1001; /* Higher than backdrop */
   min-width: 250px;
+  max-width: 300px;
   margin-top: 4px;
   overflow: hidden;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .dropdown-item {
@@ -116,6 +152,8 @@
 .progress-section {
   max-width: 1200px;
   margin: 16px auto 0 auto;
+  padding: 0 20px;
+  overflow: hidden;
 }
 
 .progress-header {
@@ -162,6 +200,7 @@
   margin: 0 auto;
   padding: 20px;
   min-height: calc(100vh - 140px);
+  overflow-x: auto;
 }
 
 .stats-grid {
@@ -210,11 +249,15 @@
 .explorer-layout {
   display: flex;
   height: 600px;
+  overflow: hidden;
 }
 
 .tables-sidebar {
   width: 350px;
+  min-width: 300px;
+  max-width: 400px;
   border-right: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .sidebar-header {
@@ -380,9 +423,35 @@
 
 .schema-content {
   flex: 1;
-  overflow-y: auto;
+  min-width: 0;
+  overflow: auto !important;
   background-color: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
 }
+
+/* Enhanced table scrolling rules */
+.table-scroll-container {
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  width: 100%;
+}
+
+.table-scroll-container table {
+  min-width: max-content !important;
+  width: auto !important;
+  table-layout: fixed !important;
+}
+
+.table-scroll-container th,
+.table-scroll-container td {
+  min-width: 400px !important;
+  width: 400px !important;
+  white-space: nowrap !important;
+}
+
+/* Force horizontal scrolling when needed */
 
 .schema-table {
   width: 100%;
@@ -483,16 +552,33 @@
   opacity: 0.9;
 }
 
+/* Table scrolling fix */
+.table-scroll-container {
+  overflow: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll-container table {
+  min-width: max-content !important;
+  width: auto !important;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;
     gap: 16px;
     text-align: center;
+    padding: 0 16px;
   }
   
   .header-actions {
     justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .main-content {
+    padding: 16px;
   }
   
   .explorer-layout {
@@ -502,6 +588,8 @@
   
   .tables-sidebar {
     width: 100%;
+    min-width: auto;
+    max-width: none;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
   }
@@ -512,5 +600,21 @@
   
   .schema-content {
     height: 400px;
+  }
+}
+
+/* Tablet Responsiveness */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .header-content {
+    gap: 12px;
+  }
+  
+  .header-actions {
+    flex-wrap: wrap;
+  }
+  
+  .tables-sidebar {
+    width: 300px;
+    min-width: 250px;
   }
 }

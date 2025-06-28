@@ -122,20 +122,27 @@ export function useDatabaseData() {
   })
 
   const searchTableData = async (filters) => {
-    if (!selectedTable || filters.length === 0) return
+    if (!selectedTable || filters.length === 0) {
+      console.log('❌ Search cancelled - no table selected or no filters')
+      return
+    }
     
+    console.log('🔍 Starting search for table:', selectedTable.name, 'with filters:', filters)
     setIsSearching(true)
     setError('')
     try {
       const result = await window.electronAPI.searchTableData(selectedTable.name, selectedTable.schema, filters)
+      console.log('📊 Search result:', result)
       if (result.success) {
         setSearchResults(result.data)
         console.log('✅ Search completed:', result.data.length, 'results found')
       } else {
         setError(result.message)
+        console.error('❌ Search failed:', result.message)
       }
     } catch (err) {
       setError(err.message)
+      console.error('❌ Search error:', err)
     } finally {
       setIsSearching(false)
     }

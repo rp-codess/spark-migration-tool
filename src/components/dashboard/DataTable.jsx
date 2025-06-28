@@ -24,7 +24,7 @@ export default function DataTable({
   const isShowingSearchResults = searchResults !== null
 
   return (
-    <div>
+    <div style={{ width: '100%', height: '100%' }}>
       {/* Search Filter Component */}
       <DataSearchFilter
         tableSchema={tableSchema}
@@ -49,7 +49,7 @@ export default function DataTable({
           </p>
         </div>
       ) : (
-        <div>
+        <div style={{ width: '100%' }}>
           {/* Result Info */}
           {isShowingSearchResults && (
             <div style={{
@@ -61,62 +61,47 @@ export default function DataTable({
               marginBottom: '12px',
               textAlign: 'center'
             }}>
-              🔍 Showing {displayData.length} search result{displayData.length !== 1 ? 's' : ''} from entire table (top 10 matches)
-            </div>
-          )}
-          
-          {!isShowingSearchResults && (
-            <div style={{
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-secondary)',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              fontSize: '14px',
-              marginBottom: '12px',
-              textAlign: 'center'
-            }}>
-              📊 Showing top {displayData.length} rows (use search to filter entire table)
+              🔍 Found {displayData.length} search result{displayData.length !== 1 ? 's' : ''}
             </div>
           )}
 
-          {/* Data Table */}
+          {/* HORIZONTAL SCROLLABLE TABLE CONTAINER */}
           <div style={{ 
             width: '100%',
-            maxWidth: 'calc(100vw - 400px)',
-            height: '500px',
-            border: '1px solid var(--border-color)',
-            borderRadius: '4px',
-            position: 'relative',
-            overflow: 'auto'
+            overflowX: 'auto',
+            overflowY: 'auto',
+            maxHeight: '500px',
+            border: '2px solid var(--border-color)',
+            borderRadius: '8px',
+            backgroundColor: 'var(--bg-primary)',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'thin'
           }}>
             <table style={{
-              borderCollapse: 'collapse',
-              fontSize: '13px',
               width: 'max-content',
               minWidth: '100%',
-              display: 'table'
+              borderCollapse: 'collapse',
+              fontSize: '14px',
+              backgroundColor: 'var(--bg-primary)'
             }}>
-              <thead style={{ 
-                position: 'sticky', 
-                top: 0, 
-                zIndex: 10,
-                borderBottom: '2px solid var(--border-color)'
-              }}>
-                <tr>
+              <thead>
+                <tr style={{ backgroundColor: 'var(--bg-secondary)' }}>
                   {Object.keys(displayData[0]).map((column, index) => (
                     <th key={index} style={{ 
                       minWidth: '200px',
                       width: '200px',
-                      padding: '8px 12px',
+                      padding: '12px 16px',
                       textAlign: 'left',
                       fontWeight: '600',
-                      fontSize: '12px',
-                      background: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-color)',
+                      fontSize: '13px',
                       borderBottom: '2px solid var(--border-color)',
-                      whiteSpace: 'nowrap',
+                      borderRight: '1px solid var(--border-color)',
                       position: 'sticky',
-                      top: 0
+                      top: 0,
+                      backgroundColor: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      zIndex: 10,
+                      whiteSpace: 'nowrap'
                     }}>
                       {column}
                     </th>
@@ -130,15 +115,17 @@ export default function DataTable({
                   }}>
                     {Object.values(row).map((value, colIndex) => (
                       <td key={colIndex} style={{ 
-                        padding: '6px 12px',
                         minWidth: '200px',
                         width: '200px',
-                        border: '1px solid var(--border-color)',
+                        padding: '8px 16px',
+                        borderBottom: '1px solid var(--border-color)',
+                        borderRight: '1px solid var(--border-color)',
                         fontSize: '13px',
-                        verticalAlign: 'top',
+                        color: 'var(--text-primary)',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis'
+                        textOverflow: 'ellipsis',
+                        maxWidth: '200px'
                       }}>
                         {value === null ? (
                           <span style={{ 
@@ -167,25 +154,22 @@ export default function DataTable({
                 ))}
               </tbody>
             </table>
-            <div style={{ 
-              padding: '8px 12px', 
-              textAlign: 'center', 
-              color: 'var(--text-secondary)', 
-              fontSize: '12px',
-              background: 'var(--bg-secondary)',
-              borderTop: '1px solid var(--border-color)',
-              fontWeight: '500',
-              position: 'sticky',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              zIndex: 5
-            }}>
-              {isShowingSearchResults 
-                ? `Showing ${displayData.length} search results (top 10 from entire table)`
-                : `Showing top ${displayData.length} rows`
-              }
-            </div>
+          </div>
+          
+          {/* Footer Info */}
+          <div style={{ 
+            padding: '8px 12px', 
+            textAlign: 'center', 
+            color: 'var(--text-secondary)', 
+            fontSize: '12px',
+            background: 'var(--bg-secondary)',
+            borderTop: '1px solid var(--border-color)',
+            marginTop: '1px'
+          }}>
+            {isShowingSearchResults 
+              ? `Showing ${displayData.length} search results`
+              : `Showing ${displayData.length} rows`
+            }
           </div>
         </div>
       )}
