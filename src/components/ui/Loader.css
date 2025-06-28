@@ -1,0 +1,157 @@
+/* Loader Styles */
+.loader-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.loader-fullscreen.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.loader-content {
+  text-align: center;
+  padding: 24px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  min-width: 200px;
+}
+
+.loader-text {
+  margin-top: 16px;
+  font-size: 16px;
+  color: #666;
+  font-weight: 500;
+}
+
+.loader-container {
+  position: relative;
+  min-height: 200px;
+}
+
+.loader-overlay-content {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.loader-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  padding: 20px;
+}
+
+.loader-text-inline {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* Custom Ant Design Spin overrides */
+.ant-spin-dot {
+  font-size: 20px;
+}
+
+.ant-spin-dot-item {
+  background-color: #1890ff;
+}
+
+.ant-spin-container {
+  position: relative;
+}
+
+.ant-spin-blur {
+  opacity: 0.5;
+  user-select: none;
+  pointer-events: none;
+}
+
+.ant-spin-blur::after {
+  opacity: 0.4;
+}
+
+/* Loading animation for download operations */
+.download-loader {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #52c41a;
+}
+
+.download-loader .anticon {
+  color: #52c41a;
+}
+
+/* Pulse animation for buttons */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(24, 144, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0);
+  }
+}
+
+.loader-pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Skeleton loading for tables */
+.loader-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Dark theme support */
+[data-theme="dark"] .loader-fullscreen {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+[data-theme="dark"] .loader-content {
+  background: #1f1f1f;
+  border-color: #434343;
+}
+
+[data-theme="dark"] .loader-text,
+[data-theme="dark"] .loader-text-inline {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .ant-spin-dot-item {
+  background-color: #1890ff;
+}
+
+[data-theme="dark"] .loader-skeleton {
+  background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+  background-size: 200% 100%;
+}

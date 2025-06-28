@@ -1,5 +1,6 @@
 import React, { memo, useMemo } from 'react'
 import SearchInput from '../ui/SearchInput'
+import Loader from '../ui/Loader'
 import { getHighlightedTextParts } from '../../utils/textUtils'
 
 // Helper function to render highlighted text
@@ -55,7 +56,8 @@ export default memo(function TablesSidebar({
             onClick={onRefresh} 
             disabled={loading}
           >
-            {loading ? '🔄' : '↻'} Refresh
+            {loading ? <Loader size="small" text="" spinning={true} /> : '↻'} 
+            {!loading && ' Refresh'}
           </button>
         </div>
         
@@ -80,10 +82,11 @@ export default memo(function TablesSidebar({
       
       <div className="tables-list">
         {loading && tables.length === 0 ? (
-          <div className="loading-state">
-            <div className="loading-icon">⏳</div>
-            Loading tables...
-          </div>
+          <Loader 
+            text="Loading tables..." 
+            spinning={true}
+            size="default"
+          />
         ) : filteredTables.length > 0 ? (
           tableList
         ) : searchTerm ? (
@@ -107,8 +110,8 @@ export default memo(function TablesSidebar({
             </button>
           </div>
         ) : (
-          <div className="loading-state">
-            <div className="loading-icon">📊</div>
+          <div className="no-tables-state">
+            <div className="no-tables-icon">📊</div>
             No tables available
           </div>
         )}

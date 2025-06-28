@@ -11,6 +11,7 @@ import {
 import CustomButton from '../ui/Button'
 import SchemaTable from './SchemaTable'
 import DataTable from './DataTable'
+import Loader from '../ui/Loader'
 
 export default function SchemaDetails({
   selectedTable,
@@ -280,10 +281,12 @@ export default function SchemaDetails({
       
       <div className="schema-content">
         {loading && selectedTable ? (
-          <div className="loading-state">
-            <div className="loading-icon">⏳</div>
-            Loading...
-          </div>
+          <Loader 
+            size="large" 
+            text="Loading table schema..." 
+            spinning={true}
+            overlay={false}
+          />
         ) : selectedTable && tableSchema.length > 0 ? (
           <>
             {viewMode === 'schema' && (
@@ -314,7 +317,7 @@ export default function SchemaDetails({
         )}
       </div>
       
-      <style jsx>{`
+      <style>{`
         @keyframes fadeInOut {
           0% { opacity: 0; transform: translateX(-50%) translateY(5px); }
           20% { opacity: 1; transform: translateX(-50%) translateY(0px); }

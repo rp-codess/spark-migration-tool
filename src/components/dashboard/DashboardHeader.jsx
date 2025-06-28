@@ -11,6 +11,7 @@ import {
   TableOutlined
 } from '@ant-design/icons'
 import ThemeToggle from '../ui/ThemeToggle'
+import Loader from '../ui/Loader'
 
 export default function DashboardHeader({ 
   config, 
@@ -132,17 +133,21 @@ export default function DashboardHeader({
           >
             <Button
               type="primary"
-              icon={<DownloadOutlined />}
-              loading={downloading || loading}
+              icon={downloading || loading || rowCountProgress.total > 0 || emptyTablesProgress.total > 0 ? 
+                <Loader size="small" text="" spinning={true} /> : 
+                <DownloadOutlined />
+              }
+              loading={false} // We handle loading with our custom component
               disabled={downloading || loading || tables.length === 0}
               style={{
-                background: (downloading || loading) ? '#52c41a' : '#1890ff',
-                borderColor: (downloading || loading) ? '#52c41a' : '#1890ff'
+                background: (downloading || loading || rowCountProgress.total > 0 || emptyTablesProgress.total > 0) ? '#52c41a' : '#1890ff',
+                borderColor: (downloading || loading || rowCountProgress.total > 0 || emptyTablesProgress.total > 0) ? '#52c41a' : '#1890ff'
               }}
+              className={downloading || loading || rowCountProgress.total > 0 || emptyTablesProgress.total > 0 ? 'loader-pulse' : ''}
             >
               {downloading ? `Downloading (${downloadProgress.current}/${downloadProgress.total})` : 
-               rowCountProgress.total > 0 ? `Getting Row Counts (${rowCountProgress.current}/${rowCountProgress.total})` :
-               emptyTablesProgress.total > 0 ? `Searching Empty Tables (${emptyTablesProgress.current}/${emptyTablesProgress.total})` :
+               rowCountProgress.total > 0 ? `Row Counts (${rowCountProgress.current}/${rowCountProgress.total})` :
+               emptyTablesProgress.total > 0 ? `Empty Tables (${emptyTablesProgress.current}/${emptyTablesProgress.total})` :
                loading ? 'Processing Tables...' : 'Download Options'}
             </Button>
           </Dropdown>
