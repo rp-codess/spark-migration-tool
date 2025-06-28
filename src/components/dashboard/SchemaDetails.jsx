@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import Button from '../ui/Button'
 import SchemaTable from './SchemaTable'
 import DataTable from './DataTable'
@@ -22,8 +22,18 @@ export default function SchemaDetails({
   onClearSearch
 }) {
   const [copyFeedback, setCopyFeedback] = useState(false)
+  const feedbackTimeoutRef = useRef(null)
   
-  const handleCopyTableName = async () => {
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current)
+      }
+    }
+  }, [])
+  
+  const handleCopyTableName = useCallback(async () => {
     if (!selectedTable) return
     
     // Extract table name without schema prefix (e.g., "public.tbRoleTable" -> "tbRoleTable")
@@ -34,20 +44,23 @@ export default function SchemaDetails({
     try {
       await navigator.clipboard.writeText(tableName)
       
-      // Play click sound
-      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIfCD+N0fPZfCkGLITM9N2QQgkUXrHm66hSFApGod/xwmMeBT+N0/PY')
-      audio.volume = 0.3
-      audio.play().catch(() => {}) // Ignore errors if audio fails
+      // Clear existing timeout
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current)
+      }
       
       // Show feedback
       setCopyFeedback(true)
-      setTimeout(() => setCopyFeedback(false), 2000)
+      feedbackTimeoutRef.current = setTimeout(() => {
+        setCopyFeedback(false)
+        feedbackTimeoutRef.current = null
+      }, 1500)
       
       console.log('Table name copied to clipboard:', tableName)
     } catch (err) {
       console.error('Failed to copy table name:', err)
     }
-  }
+  }, [selectedTable])
 
   return (
     <div className="schema-details">
@@ -74,8 +87,9 @@ export default function SchemaDetails({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  transition: 'all 0.2s ease',
-                  transform: copyFeedback ? 'scale(0.95)' : 'scale(1)'
+                  transition: 'all 0.15s ease',
+                  transform: copyFeedback ? 'scale(0.98)' : 'scale(1)',
+                  willChange: 'transform, background-color'
                 }}
               >
                 {copyFeedback ? '✅' : '📋'} {copyFeedback ? 'Copied!' : 'Copy'}
@@ -139,7 +153,15 @@ export default function SchemaDetails({
               </button>
               <button
                 className={`toggle-btn ${viewMode === 'data' ? 'active' : ''}`}
-                onClick={() => onViewModeChange('data')}
+                onClick={() => {
+                  console.log('🔄 Switching to data view')
+                  onViewModeChange('data')
+                  // Auto-load data if not already loaded
+                  if (!tableData || tableData.length === 0) {
+                    console.log('🔄 Auto-loading table data')
+                    onLoadTableData()
+                  }
+                }}
                 style={{
                   padding: '6px 12px',
                   border: '1px solid var(--border-color)',
@@ -178,8 +200,26 @@ export default function SchemaDetails({
               size="sm"
               loading={loadingTableData}
             >
-              Show Top 100
+              {loadingTableData ? 'Loading...' : 'Show Top 100'}
             </Button>
+            
+            {/* Debug button - only show in development */}
+            {process.env.NODE_ENV === 'development' && (
+              <Button
+                onClick={() => {
+                  console.log('🐛 Debug button clicked')
+                  console.log('🐛 Selected table:', selectedTable)
+                  console.log('🐛 Table data:', tableData)
+                  console.log('🐛 Loading state:', loadingTableData)
+                  onLoadTableData()
+                }}
+                variant="danger"
+                icon="🐛"
+                size="sm"
+              >
+                Debug Load
+              </Button>
+            )}
             
             <Button
               onClick={onDownloadJSON}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useDatabaseData } from '../hooks/useDatabaseData'
 import { useDownloadManager } from '../hooks/useDownloadManager'
 import DashboardHeader from './dashboard/DashboardHeader'
@@ -8,10 +8,18 @@ import SchemaDetails from './dashboard/SchemaDetails'
 import './DatabaseDashboard.css'
 
 export default function DatabaseDashboard({ config, onDisconnect }) {
-  // Local loading state for specific actions
+  // All hooks must be called in the same order every time
+  
+  // 1. Local state hooks first
   const [sqlDownloadLoading, setSqlDownloadLoading] = useState(false)
 
-  // Custom hooks for state management
+  // 2. Custom hooks (always call these in the same order with stable references)
+  // Ensure config is always defined to prevent conditional hook calls
+  const stableConfig = useMemo(() => config || {}, [config])
+  const databaseDataHook = useDatabaseData()
+  const downloadManagerHook = useDownloadManager(stableConfig)
+
+  // 3. Destructure after hooks are called
   const {
     tables,
     selectedTable,
@@ -38,7 +46,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     loadTableRowCount,
     searchTableData,
     clearSearchResults
-  } = useDatabaseData()
+  } = databaseDataHook
 
   const {
     downloading,
@@ -50,46 +58,46 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     downloadAllSchemasSQL,
     downloadTableSchema,
     downloadTableSchemaSQL
-  } = useDownloadManager(config)
+  } = downloadManagerHook
 
-  // Event handlers
-  const handleSearchClear = () => {
+  // Memoized event handlers to prevent unnecessary re-renders
+  const handleSearchClear = useCallback(() => {
     setSearchTerm('')
-  }
+  }, [setSearchTerm])
 
-  const handleSingleFileDownload = async () => {
+  const handleSingleFileDownload = useCallback(async () => {
     try {
       await downloadAllSchemasSingle(tables)
     } catch (err) {
       setError(err.message)
     }
-  }
+  }, [downloadAllSchemasSingle, tables, setError])
 
-  const handleIndividualFilesDownload = async () => {
+  const handleIndividualFilesDownload = useCallback(async () => {
     try {
       await downloadAllSchemasIndividual(tables)
     } catch (err) {
       setError(err.message)
     }
-  }
+  }, [downloadAllSchemasIndividual, tables, setError])
 
-  const handleSQLDownload = async () => {
+  const handleSQLDownload = useCallback(async () => {
     try {
       await downloadAllSchemasSQL(tables)
     } catch (err) {
       setError(err.message)
     }
-  }
+  }, [downloadAllSchemasSQL, tables, setError])
 
-  const handleDownloadTableJSON = async () => {
+  const handleDownloadTableJSON = useCallback(async () => {
     try {
       await downloadTableSchema(selectedTable, tableSchema)
     } catch (err) {
       setError(err.message)
     }
-  }
+  }, [downloadTableSchema, selectedTable, tableSchema, setError])
 
-  const handleDownloadTableSQL = async () => {
+  const handleDownloadTableSQL = useCallback(async () => {
     try {
       setSqlDownloadLoading(true)
       await downloadTableSchemaSQL(selectedTable, tableSchema)
@@ -98,28 +106,27 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     } finally {
       setSqlDownloadLoading(false)
     }
-  }
+  }, [downloadTableSchemaSQL, selectedTable, tableSchema, setError])
 
-  const handleDownloadTablesList = async () => {
+  const handleDownloadTablesList = useCallback(async () => {
     try {
-      // Simple array of table names
-      const tableNames = tables.map(table => table.name)
-
-      const result = await window.electronAPI.saveSchemaToFile(tableNames, `${config.database}_tables_list.json`)
-      if (result.success) {
-        alert(`Tables list downloaded successfully!\nSaved to: ${result.filePath}`)
-      } else {
-        setError(result.message)
-      }
+      const tablesText = tables.map(t => `${t.schema}.${t.name}`).join('\n')
+      const blob = new Blob([tablesText], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'database-tables.txt'
+      a.click()
+      URL.revokeObjectURL(url)
     } catch (err) {
       setError(err.message)
     }
-  }
+  }, [tables, setError])
 
   // Auto-load row count when a table is selected
   useEffect(() => {
     if (selectedTable && tableRowCount === null) {
-      console.log('🚀 Auto-loading row count for newly selected table:', selectedTable.name)
+      // Auto-load row count for newly selected table
       const timer = setTimeout(() => {
         loadTableRowCount()
       }, 300)
@@ -127,20 +134,13 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
     }
   }, [selectedTable, tableRowCount])
 
-  const handleTableSelect = async (table) => {
-    console.log('🎯 Table selected:', table.name)
-    await loadTableSchema(table)
-  }
+  const handleTableSelect = useCallback((table) => {
+    loadTableSchema(table)
+  }, [loadTableSchema])
 
-  const handleViewModeChange = async (mode) => {
+  const handleViewModeChange = useCallback((mode) => {
     setViewMode(mode)
-    // Auto-load data when switching to data view
-    if (mode === 'data' && selectedTable && tableData.length === 0) {
-      setTimeout(() => {
-        loadTableData()
-      }, 100) // Small delay to ensure view mode is set
-    }
-  }
+  }, [setViewMode])
 
   return (
     <div className="database-dashboard animate-fadeIn">

@@ -10,6 +10,8 @@ export default function DataTable({
   onSearch,
   onClearSearch 
 }) {
+
+  
   if (loadingTableData) {
     return (
       <div className="loading-state">
@@ -22,6 +24,8 @@ export default function DataTable({
   // Use search results if available, otherwise use regular table data
   const displayData = searchResults || tableData
   const isShowingSearchResults = searchResults !== null
+  
+
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
@@ -35,7 +39,7 @@ export default function DataTable({
       />
 
       {/* Data Display */}
-      {!displayData.length ? (
+      {!displayData?.length ? (
         <div className="empty-state">
           <div className="empty-icon">📊</div>
           <h3 className="empty-title">
@@ -47,6 +51,24 @@ export default function DataTable({
               : 'This table appears to be empty or data couldn\'t be retrieved'
             }
           </p>
+          
+          {/* Debug info in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div style={{ 
+              marginTop: '16px', 
+              padding: '12px', 
+              background: 'var(--bg-tertiary)', 
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontFamily: 'monospace'
+            }}>
+              <div>🐛 Debug Info:</div>
+              <div>tableData: {JSON.stringify(tableData)}</div>
+              <div>searchResults: {JSON.stringify(searchResults)}</div>
+              <div>displayData: {JSON.stringify(displayData)}</div>
+              <div>loadingTableData: {loadingTableData}</div>
+            </div>
+          )}
         </div>
       ) : (
         <div style={{ width: '100%' }}>

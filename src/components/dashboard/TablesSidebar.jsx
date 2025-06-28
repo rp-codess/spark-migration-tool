@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo, useMemo } from 'react'
 import SearchInput from '../ui/SearchInput'
 import { getHighlightedTextParts } from '../../utils/textUtils'
 
@@ -15,7 +15,7 @@ const renderHighlightedText = (text, searchTerm) => {
   )
 }
 
-export default function TablesSidebar({
+export default memo(function TablesSidebar({
   filteredTables,
   searchTerm,
   loading,
@@ -26,6 +26,23 @@ export default function TablesSidebar({
   onRefresh,
   onTableSelect
 }) {
+  // Memoize the table list to prevent unnecessary re-renders
+  const tableList = useMemo(() => {
+    return filteredTables.map((table, index) => (
+      <div 
+        key={`${table.schema}.${table.name}`}
+        className={`table-item ${selectedTable?.name === table.name ? 'selected' : ''}`}
+        onClick={() => onTableSelect(table)}
+      >
+        <div className="table-name">
+          📊 {renderHighlightedText(table.name, searchTerm)}
+        </div>
+        <div className="table-schema">
+          🏗️ {renderHighlightedText(table.schema, searchTerm)}
+        </div>
+      </div>
+    ))
+  }, [filteredTables, searchTerm, selectedTable, onTableSelect])
   return (
     <div className="tables-sidebar">
       <div className="sidebar-header">
@@ -68,20 +85,7 @@ export default function TablesSidebar({
             Loading tables...
           </div>
         ) : filteredTables.length > 0 ? (
-          filteredTables.map((table, index) => (
-            <div 
-              key={index}
-              className={`table-item ${selectedTable?.name === table.name ? 'selected' : ''}`}
-              onClick={() => onTableSelect(table)}
-            >
-              <div className="table-name">
-                📊 {renderHighlightedText(table.name, searchTerm)}
-              </div>
-              <div className="table-schema">
-                🏗️ {renderHighlightedText(table.schema, searchTerm)}
-              </div>
-            </div>
-          ))
+          tableList
         ) : searchTerm ? (
           <div className="no-results">
             <div className="no-results-icon">🔍</div>
@@ -111,4 +115,4 @@ export default function TablesSidebar({
       </div>
     </div>
   )
-}
+})

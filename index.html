@@ -4,9 +4,82 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Spark Migration Tool</title>
+    <style>
+      /* Prevent FOUC (Flash of Unstyled Content) */
+      html {
+        visibility: hidden;
+        opacity: 0;
+      }
+      html.loaded {
+        visibility: visible;
+        opacity: 1;
+        transition: opacity 0.2s ease-out;
+      }
+      
+      /* Loading screen */
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        color: white;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s ease-in-out infinite;
+        margin-bottom: 20px;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      .loading-text {
+        font-size: 18px;
+        font-weight: 500;
+        opacity: 0.9;
+      }
+    </style>
   </head>
   <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading Spark Migration Tool...</div>
+    </div>
+    
     <div id="root"></div>
+    
+    <script>
+      // Remove loading screen when app is ready
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.style.opacity = '0';
+            loadingScreen.style.transition = 'opacity 0.3s ease-out';
+            setTimeout(() => {
+              loadingScreen.remove();
+              document.documentElement.classList.add('loaded');
+            }, 300);
+          }
+        }, 1000); // Show loading for at least 1 second
+      });
+    </script>
+    
     <script type="module" src="/src/App.jsx"></script>
   </body>
 </html>
