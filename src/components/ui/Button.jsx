@@ -29,6 +29,7 @@ const Button = ({
     }
 
     const sizeStyles = {
+      xs: { padding: '4px 8px', fontSize: '11px' },
       sm: { padding: '6px 12px', fontSize: '12px' },
       md: { padding: '10px 16px', fontSize: '14px' },
       lg: { padding: '14px 20px', fontSize: '16px' }
@@ -41,6 +42,11 @@ const Button = ({
       },
       secondary: {
         background: 'var(--bg-tertiary)',
+        color: 'var(--text-primary)',
+        border: '1px solid var(--border-color)'
+      },
+      outline: {
+        background: 'transparent',
         color: 'var(--text-primary)',
         border: '1px solid var(--border-color)'
       },

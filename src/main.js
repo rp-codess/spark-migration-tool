@@ -2,7 +2,44 @@ const { app, BrowserWindow, ipcMain } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
+const crypto = require('crypto')
 const DatabaseManager = require('./database/DatabaseManager')
+
+// Simple encryption/decryption for passwords
+const ENCRYPTION_KEY = crypto.createHash('sha256').update('spark-migration-tool-secret-key-2024').digest()
+const algorithm = 'aes-256-cbc'
+
+function encrypt(text) {
+  if (!text) return ''
+  try {
+    const iv = crypto.randomBytes(16)
+    const cipher = crypto.createCipheriv(algorithm, ENCRYPTION_KEY, iv)
+    let encrypted = cipher.update(text, 'utf8', 'hex')
+    encrypted += cipher.final('hex')
+    return iv.toString('hex') + ':' + encrypted
+  } catch (error) {
+    console.error('Encryption error:', error)
+    return text // Return original text if encryption fails
+  }
+}
+
+function decrypt(text) {
+  if (!text) return ''
+  try {
+    const textParts = text.split(':')
+    if (textParts.length < 2) return text // Return as-is if not encrypted format
+    
+    const iv = Buffer.from(textParts.shift(), 'hex')
+    const encryptedText = textParts.join(':')
+    const decipher = crypto.createDecipheriv(algorithm, ENCRYPTION_KEY, iv)
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf8')
+    decrypted += decipher.final('utf8')
+    return decrypted
+  } catch (error) {
+    console.error('Decryption error:', error)
+    return text // Return original text if decryption fails
+  }
+}
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -19,12 +56,35 @@ function createWindow() {
   const isDev = !app.isPackaged
   
   if (isDev) {
-    // Load from Vite dev server
-    mainWindow.loadURL('http://localhost:5173').catch(() => {
-      // If dev server not available, show error
-      mainWindow.loadURL('data:text/html,<h1>Please start the dev server first with: yarn dev</h1>')
-    })
-    mainWindow.webContents.openDevTools()
+    // Try different ports for dev server
+    const devPorts = [5173, 5174, 5175, 3000]
+    let currentPortIndex = 0
+    
+    const tryNextPort = () => {
+      if (currentPortIndex < devPorts.length) {
+        const port = devPorts[currentPortIndex]
+        console.log(`Trying port ${port}...`)
+        
+        mainWindow.loadURL(`http://localhost:${port}`)
+          .then(() => {
+            console.log(`Dev server found on port ${port}`)
+            mainWindow.webContents.openDevTools()
+          })
+          .catch(() => {
+            console.log(`Port ${port} not available, trying next...`)
+            currentPortIndex++
+            if (currentPortIndex < devPorts.length) {
+              tryNextPort()
+            } else {
+              // If no dev server available, show error
+              console.log('No dev server found on any port')
+              mainWindow.loadURL('data:text/html,<h1>Please start the dev server first with: yarn dev</h1>')
+            }
+          })
+      }
+    }
+    
+    tryNextPort()
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
@@ -228,11 +288,12 @@ ipcMain.handle('save-config', async (event, config) => {
       // File doesn't exist, start with empty array
     }
     
-    // Add new config with unique ID
+    // Add new config with unique ID and encrypt password if present
     const newConfig = {
       ...config,
       id: Date.now().toString(),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      password: config.password ? encrypt(config.password) : ''
     }
     
     configs.push(newConfig)
@@ -255,7 +316,14 @@ ipcMain.handle('get-saved-configs', async (event) => {
     try {
       const data = await fs.promises.readFile(configsPath, 'utf8')
       const configs = JSON.parse(data)
-      return { success: true, configs }
+      
+      // Decrypt passwords for configs that have them
+      const decryptedConfigs = configs.map(config => ({
+        ...config,
+        password: config.password ? decrypt(config.password) : ''
+      }))
+      
+      return { success: true, configs: decryptedConfigs }
     } catch (err) {
       // File doesn't exist
       return { success: true, configs: [] }

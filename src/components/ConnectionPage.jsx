@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import Button from './ui/Button'
 import ThemeToggle from './ui/ThemeToggle'
+import SavedConnectionsModal from './SavedConnectionsModal'
+import ConnectionSaver from './ConnectionSaver'
 
 export default function ConnectionPage({ onConnect }) {
   const [config, setConfig] = useState({
@@ -16,6 +18,8 @@ export default function ConnectionPage({ onConnect }) {
   })
   const [connecting, setConnecting] = useState(false)
   const [error, setError] = useState('')
+  const [showSavedConnections, setShowSavedConnections] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
 
   const databaseTypes = [
     { value: 'mssql', label: 'Microsoft SQL Server', defaultPort: '1433' },
@@ -68,13 +72,37 @@ export default function ConnectionPage({ onConnect }) {
     }
   }
 
+  const handleLoadConnection = (loadedConfig) => {
+    // Properly set all config fields including defaults
+    setConfig({
+      type: loadedConfig.type || 'mssql',
+      host: loadedConfig.host || '',
+      port: loadedConfig.port || '',
+      database: loadedConfig.database || '',
+      username: loadedConfig.username || '',
+      password: loadedConfig.password || '',
+      schema: loadedConfig.schema || '',
+      ssl: loadedConfig.ssl || false,
+      sslMode: loadedConfig.sslMode || 'prefer'
+    })
+    setError('') // Clear any existing errors
+    // Show success message
+    setSuccessMessage(`Loaded connection: ${loadedConfig.name || loadedConfig.host}`)
+    setTimeout(() => setSuccessMessage(''), 3000)
+  }
+
+  const handleSaveSuccess = (message) => {
+    setSuccessMessage(message)
+    setTimeout(() => setSuccessMessage(''), 3000)
+  }
+
   const pageStyles = {
     minHeight: '100vh',
     background: 'var(--gradient-primary)',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
-    padding: '20px',
+    padding: '40px 20px',
     position: 'relative'
   }
 
@@ -83,9 +111,10 @@ export default function ConnectionPage({ onConnect }) {
     borderRadius: '16px',
     padding: '40px',
     boxShadow: 'var(--shadow-lg)',
-    maxWidth: '500px',
+    maxWidth: '600px',
     width: '100%',
-    position: 'relative'
+    position: 'relative',
+    marginTop: '20px'
   }
 
   const inputStyles = {
@@ -111,10 +140,35 @@ export default function ConnectionPage({ onConnect }) {
           <h1 style={{ color: 'var(--text-primary)', marginBottom: '8px', fontSize: '28px' }}>
             🚀 Spark Migration Tool
           </h1>
-          <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
+          <p style={{ color: 'var(--text-secondary)', margin: 0, marginBottom: '16px' }}>
             Connect to your database to get started
           </p>
+          <Button
+            onClick={() => setShowSavedConnections(true)}
+            variant="outline"
+            size="sm"
+            icon="📁"
+          >
+            View Saved Connections
+          </Button>
         </div>
+
+        {/* Success Message */}
+        {successMessage && (
+          <div style={{ 
+            padding: '12px', 
+            backgroundColor: 'var(--color-success)',
+            color: 'white', 
+            borderRadius: '8px',
+            fontSize: '14px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            ✅ {successMessage}
+          </div>
+        )}
 
         <div style={{ display: 'grid', gap: '16px' }}>
           <div>
@@ -263,8 +317,21 @@ export default function ConnectionPage({ onConnect }) {
               ❌ {error}
             </div>
           )}
+
+          {/* Connection Saver */}
+          <ConnectionSaver 
+            currentConfig={config}
+            onSaveSuccess={handleSaveSuccess}
+          />
         </div>
       </div>
+
+      {/* Saved Connections Modal */}
+      <SavedConnectionsModal
+        isOpen={showSavedConnections}
+        onClose={() => setShowSavedConnections(false)}
+        onLoadConnection={handleLoadConnection}
+      />
     </div>
   )
 }
