@@ -137,8 +137,10 @@ function App() {
   const handleSparkSessionChange = useCallback((session, status) => {
     console.log('Spark session changed:', { session, status })
     setSparkSession(session)
-    setSparkStatus(status)
-    if (status === 'running') {
+    if (status) {
+      setSparkStatus(status)
+    }
+    if (status === 'running' || status === 'active') {
       addConsoleMessage('Spark session started successfully', 'success')
     } else if (status === 'stopped') {
       addConsoleMessage('Spark session stopped', 'info')
@@ -212,6 +214,7 @@ function App() {
                 config={dbConfig}
                 onDisconnect={handleDisconnect}
                 onNavigateToSparkExplorer={handleNavigateToSparkExplorer}
+                onBackToSparkExplorer={handleNavigateToSparkExplorer}
                 onBackToConnection={handleBackToConnection}
                 addConsoleMessage={addConsoleMessage}
                 showBackToSpark={true}

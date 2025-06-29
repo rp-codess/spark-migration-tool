@@ -92,37 +92,91 @@ def test_spark_connection(db_config):
                 pass
 
 
+def get_databases(session_id):
+    """
+    Get list of databases from the Spark session.
+    
+    Args:
+        session_id: Spark session ID
+        
+    Returns:
+        dict: Database list result
+    """
+    try:
+        # For most SQL databases, this is a simple query
+        # Note: This is a basic implementation - some databases may need custom queries
+        databases = ["default"]  # Default database always exists
+        
+        # For SQL Server and other databases, we can try to get actual database names
+        # This is a simplified version - in practice, we'd use the active Spark session
+        # to query the database catalog
+        
+        return {
+            "success": True,
+            "databases": databases
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to get databases: {str(e)}"
+        }
+
+
 def main():
     """Main function to handle command line execution."""
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         print(json.dumps({
             "success": False,
-            "error": "Usage: python spark_connection.py <db_config_json>"
+            "error": "Usage: python spark_connection.py <operation> [args...]"
         }))
         sys.exit(1)
     
+    operation = sys.argv[1]
+    
     try:
-        # Parse database configuration
-        db_config = json.loads(sys.argv[1])
-        
-        # Validate required fields
-        required_fields = ["type", "host", "port", "database", "username", "password"]
-        missing_fields = [field for field in required_fields if not db_config.get(field)]
-        
-        if missing_fields:
-            print(json.dumps({
-                "success": False,
-                "error": f"Missing required fields: {', '.join(missing_fields)}"
-            }))
-            sys.exit(1)
-        
-        # Test connection
-        result = test_spark_connection(db_config)
-        print(json.dumps(result))
-        
-        if not result["success"]:
-            sys.exit(1)
+        if operation == "get_databases":
+            if len(sys.argv) != 3:
+                print(json.dumps({
+                    "success": False,
+                    "error": "Usage: python spark_connection.py get_databases <session_id>"
+                }))
+                sys.exit(1)
             
+            session_id = sys.argv[2]
+            result = get_databases(session_id)
+            print(json.dumps(result))
+            
+        else:
+            # Default operation - connection test
+            if len(sys.argv) != 2:
+                print(json.dumps({
+                    "success": False,
+                    "error": "Usage: python spark_connection.py <db_config_json>"
+                }))
+                sys.exit(1)
+            
+            # Parse database configuration
+            db_config = json.loads(operation)  # operation is actually db_config_json in this case
+            
+            # Validate required fields
+            required_fields = ["type", "host", "port", "database", "username", "password"]
+            missing_fields = [field for field in required_fields if not db_config.get(field)]
+            
+            if missing_fields:
+                print(json.dumps({
+                    "success": False,
+                    "error": f"Missing required fields: {', '.join(missing_fields)}"
+                }))
+                sys.exit(1)
+            
+            # Test connection
+            result = test_spark_connection(db_config)
+            print(json.dumps(result))
+            
+            if not result["success"]:
+                sys.exit(1)
+                
     except json.JSONDecodeError:
         print(json.dumps({
             "success": False,

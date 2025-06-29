@@ -760,6 +760,55 @@ ipcMain.handle('spark:connect-database', async (event, config) => {
   }
 })
 
+ipcMain.handle('spark:get-databases', async (event, sessionId) => {
+  try {
+    console.log('Spark: Getting databases for session:', sessionId)
+    const { spawn } = require('child_process')
+    const path = require('path')
+    
+    const pythonExe = path.join(__dirname, '..', 'bundled-runtime', 'python', 'python.exe')
+    const scriptPath = path.join(__dirname, '..', 'python', 'spark-scripts', 'spark_connection.py')
+    
+    return new Promise((resolve, reject) => {
+      const process = spawn(pythonExe, [scriptPath, 'get_databases', sessionId], {
+        cwd: path.join(__dirname, '..')
+      })
+      
+      let output = ''
+      let errors = ''
+      
+      process.stdout.on('data', (data) => {
+        output += data.toString()
+      })
+      
+      process.stderr.on('data', (data) => {
+        errors += data.toString()
+      })
+      
+      process.on('close', (code) => {
+        if (code === 0 && output.trim()) {
+          try {
+            const result = JSON.parse(output.trim())
+            resolve(result)
+          } catch (parseError) {
+            reject(new Error(`Failed to parse databases output: ${output}`))
+          }
+        } else {
+          reject(new Error(`Get databases failed (code ${code}): ${errors || output}`))
+        }
+      })
+      
+      process.on('error', (error) => {
+        reject(error)
+      })
+    })
+    
+  } catch (error) {
+    console.error('Error getting databases with Spark:', error)
+    return { success: false, error: error.message }
+  }
+})
+
 ipcMain.handle('spark:get-tables', async (event, sessionId, config) => {
   try {
     console.log('Spark: Getting tables for session:', sessionId)

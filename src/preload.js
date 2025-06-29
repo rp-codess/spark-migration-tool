@@ -23,7 +23,8 @@ const electronAPI = {
   
   // Spark database operations (new)
   'spark:connect-database': (config) => ipcRenderer.invoke('spark:connect-database', config),
-  'spark:get-tables': (sessionId) => ipcRenderer.invoke('spark:get-tables', sessionId),
+  'spark:get-databases': (sessionId) => ipcRenderer.invoke('spark:get-databases', sessionId),
+  'spark:get-tables': (sessionId, config) => ipcRenderer.invoke('spark:get-tables', sessionId, config),
   'spark:export-csv': (data) => ipcRenderer.invoke('spark:export-csv', data),
   'spark:disconnect': (sessionId) => ipcRenderer.invoke('spark:disconnect', sessionId),
   

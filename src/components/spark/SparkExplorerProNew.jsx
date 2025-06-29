@@ -66,6 +66,34 @@ const SparkExplorerPro = ({
     addLog('Spark Explorer Pro initialized', 'info')
   }, [])
 
+  // Sync with parent props when they change
+  useEffect(() => {
+    if (propSparkSession && !sparkSession) {
+      setSparkSession(propSparkSession)
+      setIsConnected(true)
+      setSparkStatus('active')
+      addLog('Restored Spark session from parent', 'info')
+    }
+  }, [propSparkSession, sparkSession, addLog])
+
+  useEffect(() => {
+    if (propSparkStatus && propSparkStatus !== sparkStatus) {
+      setSparkStatus(propSparkStatus)
+    }
+  }, [propSparkStatus, sparkStatus])
+
+  // Set initial connection from dbConfig
+  useEffect(() => {
+    if (dbConfig && !selectedConnection) {
+      setSelectedConnection(dbConfig)
+      if (dbConfig.connected || dbConfig.sparkConnected) {
+        setIsConnected(true)
+        setSparkStatus('active')
+        addLog(`Restored connection to ${dbConfig.name}`, 'info')
+      }
+    }
+  }, [dbConfig, selectedConnection, addLog])
+
   const loadSavedConnections = async () => {
     try {
       addLog('Loading saved connections...', 'info')
@@ -89,14 +117,43 @@ const SparkExplorerPro = ({
     addLog(`Connecting to ${connection.name} (${connection.type})...`, 'info')
 
     try {
+      // First, verify all required packages are installed (like SparkTableExport does)
+      addLog('🔍 Checking Python environment and packages...', 'info')
+      const packageCheck = await window.electronAPI.invoke('python-runtime:verify-packages')
+      
+      if (packageCheck.success) {
+        if (!packageCheck.all_installed) {
+          addLog(`⚠️ Missing packages detected: ${packageCheck.missing_packages.join(', ')}`, 'warning')
+          addLog('📦 Installing missing packages automatically...', 'info')
+          
+          const installResult = await window.electronAPI.invoke('python-runtime:install-missing-packages')
+          
+          if (installResult.success) {
+            addLog('✅ All required packages installed successfully!', 'success')
+          } else {
+            addLog(`❌ Package installation failed: ${installResult.error}`, 'error')
+            setSparkStatus('error')
+            return
+          }
+        } else {
+          addLog('✅ All required packages are already installed', 'success')
+        }
+      } else {
+        addLog(`❌ Package verification failed: ${packageCheck.error}`, 'error')
+        setSparkStatus('error')
+        return
+      }
+
+      addLog('⚡ Initializing Spark session with JDBC driver...', 'info')
       const sparkResult = await window.electronAPI.invoke('spark:connect-database', connection)
 
       if (sparkResult.success) {
-        setSparkSession(sparkResult.session)
+        setSparkSession(sparkResult.sessionId)
         setSparkStatus('active')
         setIsConnected(true)
         setSelectedConnection(connection)
         addLog(`Connected to ${connection.name} successfully!`, 'success')
+        addLog(`📋 Session ID: ${sparkResult.sessionId}`, 'info')
         
         // ALSO establish a regular database connection for DatabaseDashboard
         try {
@@ -112,15 +169,15 @@ const SparkExplorerPro = ({
         }
         
         if (onSparkSessionChange) {
-          onSparkSessionChange(sparkResult.session)
+          onSparkSessionChange(sparkResult.sessionId, 'active')
         }
         if (onConnect) {
           onConnect(connection)
         }
         
-        await loadDatabases(sparkResult.session)
+        await loadDatabases(sparkResult.sessionId)
       } else {
-        throw new Error(sparkResult.message || 'Failed to start Spark session')
+        throw new Error(sparkResult.error || 'Failed to start Spark session')
       }
     } catch (error) {
       addLog(`Connection failed: ${error.message}`, 'error')
@@ -183,6 +240,17 @@ const SparkExplorerPro = ({
       if (result.success) {
         setTables(result.tables || [])
         addLog(`Found ${result.tables?.length || 0} tables in ${database}`, 'success')
+        
+        // If tables is still an array of strings, convert to objects
+        if (result.tables && result.tables.length > 0) {
+          const formattedTables = result.tables.map(table => {
+            if (typeof table === 'string') {
+              return { name: table, schema: 'dbo' }
+            }
+            return table
+          })
+          setTables(formattedTables)
+        }
       } else {
         addLog(`Failed to load tables: ${result.message}`, 'error')
       }
@@ -426,12 +494,20 @@ const SparkExplorerPro = ({
                     cursor: 'pointer'
                   }}
                   onClick={() => {
+                    // Disconnect from Spark and clear all state
                     setIsConnected(false)
                     setSparkSession(null)
                     setSelectedConnection(null)
                     setSparkStatus('inactive')
                     setDatabases([])
                     setTables([])
+                    
+                    // Notify parent
+                    if (onSparkSessionChange) {
+                      onSparkSessionChange(null, 'inactive')
+                    }
+                    
+                    addLog('Disconnected from Spark session', 'info')
                   }}
                 >
                   <StopIcon style={{ width: '14px', height: '14px' }} />
@@ -517,45 +593,50 @@ const SparkExplorerPro = ({
                     No tables found
                   </p>
                 ) : (
-                  tables.map(table => (
-                    <div key={table} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 10px',
-                      backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      marginBottom: '4px',
-                      cursor: 'pointer'
-                    }}>
-                      <TableCellsIcon style={{ width: '14px', height: '14px', color: '#3b82f6' }} />
-                      <span style={{
-                        flex: '1',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: '#374151'
+                  tables.map((table, index) => {
+                    const tableName = typeof table === 'string' ? table : table.name
+                    const tableSchema = typeof table === 'string' ? 'dbo' : (table.schema || 'dbo')
+                    
+                    return (
+                      <div key={index} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 10px',
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        marginBottom: '4px',
+                        cursor: 'pointer'
                       }}>
-                        {table}
-                      </span>
-                      <button 
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '4px',
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          color: '#64748b'
-                        }}
-                        title="Preview data"
-                      >
-                        <EyeIcon style={{ width: '14px', height: '14px' }} />
-                      </button>
-                    </div>
-                  ))
+                        <TableCellsIcon style={{ width: '14px', height: '14px', color: '#3b82f6' }} />
+                        <span style={{
+                          flex: '1',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          color: '#374151'
+                        }}>
+                          {tableSchema}.{tableName}
+                        </span>
+                        <button 
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '4px',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            color: '#64748b'
+                          }}
+                          title="Preview data"
+                        >
+                          <EyeIcon style={{ width: '14px', height: '14px' }} />
+                        </button>
+                      </div>
+                    )
+                  })
                 )}
               </div>
             </div>
