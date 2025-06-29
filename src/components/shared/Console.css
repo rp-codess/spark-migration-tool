@@ -1,0 +1,256 @@
+/* Console Component Styles */
+.console-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1e1e1e;
+  border-top: 2px solid #007acc;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  transition: all 0.3s ease;
+  max-height: 60vh;
+  min-height: 40px;
+}
+
+.console-container.collapsed {
+  height: 40px;
+  overflow: hidden;
+}
+
+.console-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #2d2d30;
+  padding: 8px 16px;
+  border-bottom: 1px solid #3e3e42;
+  user-select: none;
+}
+
+.console-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #cccccc;
+  font-weight: 500;
+}
+
+.console-toggle {
+  background: none;
+  border: none;
+  color: #cccccc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.console-toggle:hover {
+  background: #3e3e42;
+}
+
+.toggle-icon {
+  transition: transform 0.2s ease;
+  font-size: 12px;
+}
+
+.toggle-icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.log-count {
+  color: #858585;
+  font-size: 12px;
+}
+
+.console-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.console-controls button {
+  background: none;
+  border: none;
+  color: #cccccc;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.console-controls button:hover {
+  background: #3e3e42;
+  color: #ffffff;
+}
+
+.auto-scroll-btn.active {
+  background: #007acc;
+  color: #ffffff;
+}
+
+.clear-btn:hover {
+  color: #ff6b6b;
+}
+
+.close-btn:hover {
+  color: #ff6b6b;
+}
+
+.console-content {
+  overflow-y: auto;
+  background: #1e1e1e;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.console-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.console-content::-webkit-scrollbar-track {
+  background: #252526;
+}
+
+.console-content::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 4px;
+}
+
+.console-content::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+
+.no-logs {
+  padding: 20px;
+  text-align: center;
+  color: #858585;
+  font-style: italic;
+}
+
+.log-entry {
+  display: flex;
+  align-items: flex-start;
+  padding: 4px 16px;
+  border-bottom: 1px solid #2d2d30;
+  transition: background-color 0.1s;
+}
+
+.log-entry:hover {
+  background: #252526;
+}
+
+.log-timestamp {
+  color: #858585;
+  font-size: 11px;
+  min-width: 80px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.log-level {
+  color: #569cd6;
+  font-weight: bold;
+  font-size: 11px;
+  min-width: 60px;
+  margin-right: 12px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.log-message {
+  color: #cccccc;
+  flex: 1;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* Log type specific styles */
+.log-error .log-level {
+  color: #f48771;
+}
+
+.log-error .log-message {
+  color: #f48771;
+}
+
+.log-warning .log-level {
+  color: #dcdcaa;
+}
+
+.log-warning .log-message {
+  color: #dcdcaa;
+}
+
+.log-success .log-level {
+  color: #4ec9b0;
+}
+
+.log-success .log-message {
+  color: #4ec9b0;
+}
+
+.log-info .log-level {
+  color: #569cd6;
+}
+
+.log-info .log-message {
+  color: #cccccc;
+}
+
+.log-default .log-level {
+  color: #cccccc;
+}
+
+.log-default .log-message {
+  color: #cccccc;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .console-header {
+    padding: 6px 12px;
+  }
+  
+  .console-title {
+    font-size: 13px;
+  }
+  
+  .log-timestamp {
+    min-width: 60px;
+    font-size: 10px;
+  }
+  
+  .log-level {
+    min-width: 50px;
+    font-size: 10px;
+  }
+  
+  .console-content {
+    font-size: 12px;
+  }
+}
+
+/* Animation for showing/hiding */
+.console-container.entering {
+  transform: translateY(100%);
+}
+
+.console-container.entered {
+  transform: translateY(0);
+}
+
+.console-container.exiting {
+  transform: translateY(100%);
+}
+
+.console-container.exited {
+  transform: translateY(100%);
+}

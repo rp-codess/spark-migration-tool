@@ -6,7 +6,7 @@ import ThemeToggle from './ui/ThemeToggle'
 import SavedConnectionsModal from './SavedConnectionsModal'
 import ConnectionSaver from './ConnectionSaver'
 
-export default function ConnectionPage({ onConnect, onNavigateToRuntime, onNavigateToSpark }) {
+export default function ConnectionPage({ onConnect, onNavigateToRuntime, onNavigateToSpark, onNavigateToSparkExplorer }) {
   const [config, setConfig] = useState({
     type: 'mssql',
     host: '',
@@ -171,12 +171,20 @@ export default function ConnectionPage({ onConnect, onNavigateToRuntime, onNavig
               Spark Runtime
             </Button>
             <Button
-              onClick={onNavigateToSpark}
+              onClick={onNavigateToSparkExplorer}
               variant="primary"
               size="sm"
               style={{ background: '#28a745', borderColor: '#28a745' }}
             >
-              🚀 Spark Export
+              🚀 Spark Explorer
+            </Button>
+            <Button
+              onClick={onNavigateToSpark}
+              variant="outline"
+              size="sm"
+              style={{ borderColor: '#17a2b8', color: '#17a2b8' }}
+            >
+              📊 Table Export
             </Button>
           </div>
         </div>

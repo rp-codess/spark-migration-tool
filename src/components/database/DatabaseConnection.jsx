@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import Button from './ui/Button'
+import Button from '../ui/Button'
 
 export default function DatabaseConnection({ onConnect }) {
   const [config, setConfig] = useState({

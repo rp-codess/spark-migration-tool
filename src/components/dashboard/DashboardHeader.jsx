@@ -15,7 +15,8 @@ import Loader from '../ui/Loader'
 
 export default function DashboardHeader({ 
   config, 
-  onDisconnect, 
+  onDisconnect,
+  onBackToSparkExplorer,
   downloading, 
   tables, 
   downloadProgress,
@@ -35,6 +36,20 @@ export default function DashboardHeader({
   onDownloadEmptyTablesJSON,
   loading // Add loading prop for row count operations
 }) {
+  // Handle null config
+  if (!config) {
+    return (
+      <div className="dashboard-header">
+        <div className="header-content">
+          <div className="header-info">
+            <h1 className="header-title">📊 Database Explorer</h1>
+            <p className="header-subtitle">No database connection</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const downloadMenuItems = [
     {
       key: 'json-single',
@@ -112,7 +127,7 @@ export default function DashboardHeader({
             📊 Database Explorer
           </h1>
           <p className="header-subtitle">
-            {config.type.toUpperCase()} • {config.host} • {config.database}
+            {config?.type?.toUpperCase() || 'Unknown'} • {config?.host || 'Unknown'} • {config?.database || 'Unknown'}
           </p>
         </div>
         <div className="header-actions">
@@ -151,6 +166,16 @@ export default function DashboardHeader({
                loading ? 'Processing Tables...' : 'Download Options'}
             </Button>
           </Dropdown>
+          
+          {onBackToSparkExplorer && (
+            <Button
+              icon={<DatabaseOutlined />}
+              onClick={onBackToSparkExplorer}
+              style={{ marginLeft: '8px' }}
+            >
+              ⚡ Back to Spark Explorer
+            </Button>
+          )}
           
           <Button
             danger

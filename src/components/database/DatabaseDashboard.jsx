@@ -1,21 +1,34 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useDatabaseData } from '../hooks/useDatabaseData'
-import { useDownloadManager } from '../hooks/useDownloadManager'
-import DashboardHeader from './dashboard/DashboardHeader'
-import StatsCards from './dashboard/StatsCards'
-import TablesSidebar from './dashboard/TablesSidebar'
-import SchemaDetails from './dashboard/SchemaDetails'
+import { useDatabaseData } from '../../hooks/useDatabaseData'
+import { useDownloadManager } from '../../hooks/useDownloadManager'
+import DashboardHeader from '../dashboard/DashboardHeader'
+import StatsCards from '../dashboard/StatsCards'
+import TablesSidebar from '../dashboard/TablesSidebar'
+import SchemaDetails from '../dashboard/SchemaDetails'
 import './DatabaseDashboard.css'
 
-export default function DatabaseDashboard({ config, onDisconnect }) {
-  // All hooks must be called in the same order every time
+export default function DatabaseDashboard({ config, onDisconnect, onBackToSparkExplorer, showBackToSpark }) {
+  // Debug logging
+  console.log('DatabaseDashboard received config:', config)
+  console.log('showBackToSpark flag:', showBackToSpark)
   
   // 1. Local state hooks first
   const [sqlDownloadLoading, setSqlDownloadLoading] = useState(false)
 
   // 2. Custom hooks (always call these in the same order with stable references)
   // Ensure config is always defined to prevent conditional hook calls
-  const stableConfig = useMemo(() => config || {}, [config])
+  const stableConfig = useMemo(() => {
+    if (!config) return {}
+    
+    // Ensure all required properties exist with defaults
+    return {
+      ...config,
+      type: config.type || 'unknown',
+      host: config.host || 'localhost',
+      database: config.database || 'unknown',
+      port: config.port || '1433'
+    }
+  }, [config])
   const databaseDataHook = useDatabaseData()
   const downloadManagerHook = useDownloadManager(stableConfig)
 
@@ -374,7 +387,9 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
       const jsonContent = JSON.stringify({
         metadata: {
           exported: new Date().toISOString(),
-          source: `${config.type.toUpperCase()}: ${config.host}/${config.database}`,
+          source: (config && config.type && config.host && config.database) 
+            ? `${config.type.toUpperCase()}: ${config.host}/${config.database}` 
+            : 'Unknown Source',
           totalTables: tables.length,
           emptyTablesCount: emptyTables.length,
           description: 'List of tables with zero row count'
@@ -437,6 +452,7 @@ export default function DatabaseDashboard({ config, onDisconnect }) {
       <DashboardHeader
         config={config}
         onDisconnect={onDisconnect}
+        onBackToSparkExplorer={onBackToSparkExplorer}
         downloading={downloading}
         loading={loading}
         tables={tables}

@@ -66,7 +66,9 @@
     <script>
       // Remove loading screen when app is ready
       document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM Content Loaded');
         setTimeout(() => {
+          console.log('Removing loading screen...');
           const loadingScreen = document.getElementById('loading-screen');
           if (loadingScreen) {
             loadingScreen.style.opacity = '0';
@@ -74,6 +76,7 @@
             setTimeout(() => {
               loadingScreen.remove();
               document.documentElement.classList.add('loaded');
+              console.log('Loading screen removed, React should now be visible');
             }, 300);
           }
         }, 1000); // Show loading for at least 1 second

@@ -1,0 +1,382 @@
+/* Spark Database Explorer Styles */
+.spark-database-explorer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f8f9fa;
+}
+
+.explorer-main {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  margin-bottom: 250px; /* Space for console */
+}
+
+.explorer-header {
+  margin-bottom: 30px;
+}
+
+.explorer-header h2 {
+  color: #2c3e50;
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.explorer-header p {
+  color: #6c757d;
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Connection Section */
+.connection-section h3 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.connections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.connection-card {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.connection-card:hover {
+  border-color: #007bff;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.connection-card.selected {
+  border-color: #007bff;
+  background: #f8f9ff;
+}
+
+.connection-type {
+  background: #007bff;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.connection-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 4px;
+}
+
+.connection-details {
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.connection-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 123, 255, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.no-connections {
+  text-align: center;
+  padding: 40px;
+  color: #6c757d;
+}
+
+.no-connections p {
+  margin: 8px 0;
+}
+
+/* Explorer Content */
+.explorer-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.connection-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #28a745;
+  position: relative;
+}
+
+.status-indicator.connected::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #28a745;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+.session-id {
+  font-family: monospace;
+  background: #e9ecef;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #495057;
+}
+
+.connection-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.refresh-btn, .disconnect-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.refresh-btn {
+  background: #007bff;
+  color: white;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.refresh-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.disconnect-btn {
+  background: #dc3545;
+  color: white;
+}
+
+.disconnect-btn:hover {
+  background: #c82333;
+}
+
+/* Tables Section */
+.tables-section {
+  padding: 20px;
+}
+
+.tables-section h3 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.loading-tables {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  color: #6c757d;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e9ecef;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.tables-list {
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.table-item {
+  border-bottom: 1px solid #e9ecef;
+}
+
+.table-item:last-child {
+  border-bottom: none;
+}
+
+.table-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.table-header:hover {
+  background: #f8f9fa;
+}
+
+.expand-icon {
+  width: 16px;
+  height: 16px;
+  color: #6c757d;
+  flex-shrink: 0;
+}
+
+.table-name {
+  font-weight: 600;
+  color: #2c3e50;
+  flex: 1;
+}
+
+.table-schema {
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.table-type {
+  background: #e9ecef;
+  color: #495057;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.table-details {
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+}
+
+.loading-schema {
+  padding: 20px;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.schema-columns {
+  padding: 16px;
+}
+
+.column-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.column-row:last-child {
+  border-bottom: none;
+}
+
+.column-name {
+  font-weight: 500;
+  color: #2c3e50;
+  font-family: monospace;
+}
+
+.column-type {
+  color: #007bff;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.column-nullable {
+  color: #6c757d;
+  font-size: 12px;
+  text-align: right;
+}
+
+.no-tables {
+  padding: 40px;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .explorer-main {
+    padding: 16px;
+    margin-bottom: 200px;
+  }
+  
+  .connections-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .connection-info {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .connection-status {
+    justify-content: center;
+  }
+  
+  .connection-actions {
+    justify-content: center;
+  }
+  
+  .column-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  
+  .column-nullable {
+    text-align: left;
+  }
+}
