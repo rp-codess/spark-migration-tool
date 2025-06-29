@@ -6,6 +6,8 @@ import ErrorBoundary from './components/ErrorBoundary'
 import Router, { Page } from './components/Router'
 import ConnectionPage from './components/ConnectionPage'
 import DatabaseDashboard from './components/DatabaseDashboard'
+import SparkRuntimeManager from './components/SparkRuntimeManager'
+import SparkTableExport from './components/SparkTableExport'
 // import performanceMonitor, { optimizeForSlowDevices } from './utils/performanceMonitor'
 import './styles/globals.css'
 
@@ -48,14 +50,100 @@ function App() {
     setCurrentPage('connection')
   }, [])
 
+  const handleNavigateToRuntime = useCallback(() => {
+    setCurrentPage('runtime')
+  }, [])
+
+  const handleNavigateToConnection = useCallback(() => {
+    setCurrentPage('connection')
+  }, [])
+
+  const handleNavigateToSpark = useCallback(() => {
+    setCurrentPage('spark-export')
+  }, [])
+
   // Memoize components to prevent unnecessary re-renders
   const connectionPage = useMemo(() => (
-    <ConnectionPage onConnect={handleConnect} />
-  ), [handleConnect])
+    <ConnectionPage 
+      onConnect={handleConnect} 
+      onNavigateToRuntime={handleNavigateToRuntime}
+      onNavigateToSpark={handleNavigateToSpark}
+    />
+  ), [handleConnect, handleNavigateToRuntime, handleNavigateToSpark])
 
   const dashboardPage = useMemo(() => (
     <DatabaseDashboard config={dbConfig} onDisconnect={handleDisconnect} />
   ), [dbConfig, handleDisconnect])
+
+  const runtimePage = useMemo(() => (
+    <div>
+      <div style={{ padding: '1rem', borderBottom: '1px solid #ddd' }}>
+        <button 
+          onClick={handleNavigateToConnection}
+          style={{
+            padding: '0.5rem 1rem',
+            background: '#007acc',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginRight: '10px'
+          }}
+        >
+          ← Back to Connection
+        </button>
+        <button 
+          onClick={handleNavigateToSpark}
+          style={{
+            padding: '0.5rem 1rem',
+            background: '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          🚀 Spark Export
+        </button>
+      </div>
+      <SparkRuntimeManager />
+    </div>
+  ), [handleNavigateToConnection, handleNavigateToSpark])
+
+  const sparkExportPage = useMemo(() => (
+    <div>
+      <div style={{ padding: '1rem', borderBottom: '1px solid #ddd' }}>
+        <button 
+          onClick={handleNavigateToConnection}
+          style={{
+            padding: '0.5rem 1rem',
+            background: '#007acc',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginRight: '10px'
+          }}
+        >
+          ← Back to Connection
+        </button>
+        <button 
+          onClick={() => setCurrentPage('runtime')}
+          style={{
+            padding: '0.5rem 1rem',
+            background: '#6c757d',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          🔧 Runtime Manager
+        </button>
+      </div>
+      <SparkTableExport />
+    </div>
+  ), [handleNavigateToConnection])
 
   return (
     <ErrorBoundary>
@@ -67,6 +155,12 @@ function App() {
             </Page>
             <Page name="dashboard">
               {dashboardPage}
+            </Page>
+            <Page name="runtime">
+              {runtimePage}
+            </Page>
+            <Page name="spark-export">
+              {sparkExportPage}
             </Page>
           </Router>
         </div>

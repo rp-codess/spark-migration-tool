@@ -1,0 +1,14 @@
+# Minimal requirements for SQL Server connectivity with Spark
+# Only includes packages that don't require compilation
+
+pyspark==3.5.0
+findspark==2.0.1
+py4j==0.10.9.7
+pyodbc==5.0.1
+PyMySQL==1.1.0
+pandas==2.1.3
+numpy==1.24.3
+sqlalchemy==2.0.23
+
+# Note: cx-Oracle and psycopg2-binary excluded as they require compilation
+# and are not needed for SQL Server connectivity

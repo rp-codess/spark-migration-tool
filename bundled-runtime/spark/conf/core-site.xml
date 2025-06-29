@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Minimal Hadoop configuration for Windows Spark -->
+    <property>
+        <name>fs.defaultFS</name>
+        <value>file:///</value>
+    </property>
+    <property>
+        <name>hadoop.tmp.dir</name>
+        <value>C:/temp/hadoop</value>
+    </property>
+    <property>
+        <name>hadoop.home.dir</name>
+        <value>C:/temp/hadoop</value>
+    </property>
+    <property>
+        <name>fs.file.impl</name>
+        <value>org.apache.hadoop.fs.LocalFileSystem</value>
+    </property>
+    <property>
+        <name>io.file.buffer.size</name>
+        <value>131072</value>
+    </property>
+</configuration>
