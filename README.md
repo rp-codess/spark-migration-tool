@@ -201,10 +201,18 @@ spark-migration-tool/
 │   ├── scripts/                  # Setup and management scripts
 │   └── config/                   # Runtime configuration
 ├── python/                       # Python scripts
-│   ├── scripts/                  # Migration and analysis scripts
-│   │   ├── data_migration.py     # Data migration logic
-│   │   └── schema_comparison.py  # Schema comparison
-│   └── requirements-spark.txt    # Python dependencies
+│   ├── spark-scripts/            # Modular Spark scripts
+│   │   ├── README.md                    # Developer documentation
+│   │   ├── spark_environment.py         # Environment setup utility
+│   │   ├── spark_connection.py          # Database connection testing
+│   │   ├── spark_table_operations.py    # Table listing and operations
+│   │   ├── spark_export.py              # CSV export functionality
+│   │   └── examples/
+│   │       └── custom_migration.py      # Custom migration template
+│   ├── scripts/                  # Legacy migration and analysis scripts
+│   │   ├── data_migration.py           # Data migration operations
+│   │   └── schema_comparison.py        # Schema comparison utilities
+│   └── requirements*.txt                # Python dependencies
 ├── public/                       # Static assets
 ├── dist/                         # Built application
 ├── package.json                  # Node.js dependencies
@@ -243,6 +251,76 @@ yarn test:runtime
 2. Update connection string templates in `src/database/`
 3. Add database-specific SQL queries
 4. Test connection and migration flows
+
+## 🪟 Windows Compatibility Improvements
+
+### Enhanced Spark Cleanup (v1.2+)
+The tool includes comprehensive Windows-specific improvements for Spark operations:
+
+**Key Improvements:**
+- **🧹 Smart Temp Directory Management**: Unique session-based temporary directories prevent file conflicts
+- **🔄 Graceful Cleanup**: Enhanced cleanup logic with proper file handle release timing
+- **🚫 Suppressed Java Warnings**: Clean user interface without verbose Java stderr output
+- **💪 Robust Error Handling**: User-friendly error messages instead of Java stack traces
+
+**Technical Details:**
+- Session-specific temp directories: `bundled-runtime/temp/spark/session_[timestamp]_[id]/`
+- Automatic cleanup of directories older than 1 hour
+- Windows file handle release timing improvements
+- Spark shutdown hook optimization for Windows
+
+**Error Message Examples:**
+- ❌ Before: `ERROR ShutdownHookManager: Exception while deleting Spark temp dir: [500+ lines of Java stacktrace]`
+- ✅ After: `Database host not found - check hostname/IP address`
+
+**Files Involved:**
+- `python/spark-scripts/spark_environment.py` - Enhanced Windows configuration
+- `python/spark-scripts/spark_table_operations_clean.py` - Clean output wrapper
+- `python/spark-scripts/WINDOWS_CLEANUP_IMPROVEMENTS.md` - Detailed technical documentation
+
+### Testing Windows Improvements
+```bash
+# Run Windows-specific tests
+cd python/spark-scripts
+python test_windows_cleanup.py
+
+# Test table operations with clean output
+python spark_table_operations_clean.py '{"type":"postgresql","host":"test","port":5432,"database":"test","username":"user","password":"pass"}'
+```
+
+## 🪟 Windows Compatibility Improvements
+
+### Enhanced Windows Support
+Recent improvements have significantly enhanced Windows compatibility and user experience:
+
+#### ✅ **Spark Temp Directory Handling**
+- **Fixed**: Java NoSuchFileException errors during Spark cleanup
+- **Solution**: Unique session-based temp directories with robust cleanup logic
+- **Benefit**: Clean operation without disruptive error messages
+
+#### ✅ **SQL Server ORDER BY Fix**
+- **Fixed**: "ORDER BY clause is invalid" errors when listing SQL Server tables
+- **Solution**: Restructured SQL queries to use Spark DataFrame sorting
+- **Benefit**: Seamless SQL Server integration
+
+#### ✅ **Clean Output Processing**
+- **Added**: Clean wrapper scripts that suppress Java stderr warnings
+- **Features**: Production-ready output with user-friendly error messages
+- **Files**: `spark_table_operations_clean.py` for clean JSON responses
+
+#### ✅ **Enhanced Error Handling**
+- **Improved**: Intelligent error message parsing and user-friendly descriptions
+- **Examples**: 
+  - `"Cannot connect to SQL Server - check hostname and port"` instead of Java stack traces
+  - `"Database host not found - check hostname/IP address"` for DNS issues
+  - `"Invalid database credentials"` for authentication failures
+
+#### 📁 **Windows-Specific Files**
+- **`WINDOWS_IMPROVEMENTS.md`**: Detailed technical documentation
+- **`test_windows_cleanup.py`**: Comprehensive Windows testing suite
+- **`spark_table_operations_clean.py`**: Production wrapper with clean output
+
+For detailed technical information, see [`WINDOWS_IMPROVEMENTS.md`](WINDOWS_IMPROVEMENTS.md).
 
 ## 🐛 Troubleshooting
 

@@ -59,6 +59,35 @@
 - Tries multiple common ports (5173, 5174, 5175, 3000)
 - Better error handling for dev server connection
 
+## 🏗️ Architecture Improvements
+
+### 1. **Spark Scripts Refactoring**
+- **Problem**: Spark code was embedded directly in main.js, making it hard to maintain
+- **Solution**: 
+  - Created dedicated `python/spark-scripts/` directory
+  - Separated Spark operations into individual Python scripts
+  - Added centralized environment setup utility
+  - Created developer documentation and examples
+- **Benefits**:
+  - Better separation of concerns
+  - Easier to test and debug individual operations
+  - Scalable architecture for adding new Spark features
+  - Cleaner main.js without embedded Python code
+  - Reusable scripts that can be run independently
+
+### 2. **Modular Script Architecture**
+- **spark_environment.py**: Centralized environment setup and configuration
+- **spark_connection.py**: Database connection testing with Spark
+- **spark_table_operations.py**: Table listing and metadata operations
+- **spark_export.py**: CSV export functionality
+- **examples/custom_migration.py**: Template for custom migrations
+
+### 3. **Developer Experience**
+- **Added**: Comprehensive README for Spark scripts development
+- **Added**: Examples and templates for custom operations
+- **Added**: Standardized error handling and JSON communication
+- **Added**: Environment validation and troubleshooting utilities
+
 ## 🎯 User Experience Improvements
 
 ### Before:

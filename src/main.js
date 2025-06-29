@@ -709,18 +709,6 @@ app.whenReady().then(async () => {
   })
 })
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow()
-  }
-})
-
 // Spark-specific database operations
 ipcMain.handle('spark:connect-database', async (event, config) => {
   try {
@@ -728,153 +716,12 @@ ipcMain.handle('spark:connect-database', async (event, config) => {
     const { spawn } = require('child_process')
     const path = require('path')
     
-    // Create a unique session ID
-    const sessionId = `spark_session_${Date.now()}`
-    
-    // Prepare Spark connection script
-    const sparkScript = `
-import sys
-import os
-import json
-
-# Set up paths for bundled runtime
-bundle_root = r"${path.join(__dirname, '..', 'bundled-runtime').replace(/\\/g, '\\\\')}"
-spark_home = os.path.join(bundle_root, "spark")
-drivers_path = os.path.join(bundle_root, "drivers")
-java_home = os.path.join(bundle_root, "java")
-python_home = os.path.join(bundle_root, "python")
-
-# Add bundled Python site-packages to path
-python_site_packages = os.path.join(python_home, "Lib", "site-packages")
-if python_site_packages not in sys.path:
-    sys.path.insert(0, python_site_packages)
-
-# Set environment variables
-os.environ["SPARK_HOME"] = spark_home
-os.environ["PYTHONPATH"] = os.pathsep.join([
-    os.path.join(spark_home, "python"),
-    os.path.join(spark_home, "python", "lib", "pyspark.zip"),
-    os.path.join(spark_home, "python", "lib", "py4j-*.zip"),
-    python_site_packages
-])
-
-# Find Java executable
-import glob
-java_dirs = glob.glob(os.path.join(java_home, "*"))
-if java_dirs:
-    java_bin = os.path.join(java_dirs[0], "bin", "java.exe")
-    os.environ["JAVA_HOME"] = java_dirs[0]
-    print(f"Java found: {java_dirs[0]}")
-else:
-    print(json.dumps({"success": False, "error": "Java not found in bundled runtime"}))
-    sys.exit(1)
-
-# Find SQL Server JDBC driver
-mssql_jar = None
-for file in os.listdir(drivers_path):
-    if file.startswith("mssql-jdbc") and file.endswith(".jar"):
-        mssql_jar = os.path.join(drivers_path, file)
-        break
-
-if not mssql_jar:
-    print(json.dumps({"success": False, "error": "SQL Server JDBC driver not found"}))
-    sys.exit(1)
-
-print(f"Using JDBC driver: {mssql_jar}")
-
-try:
-    # Import PySpark
-    from pyspark.sql import SparkSession
-    from pyspark import SparkConf
-    
-    # Create Spark configuration
-    conf = SparkConf()
-    conf.setAppName("SparkMigrationTool_${sessionId}")
-    conf.set("spark.jars", mssql_jar)
-    conf.set("spark.sql.adaptive.enabled", "true")
-    conf.set("spark.sql.adaptive.coalescePartitions.enabled", "true")
-    conf.set("spark.driver.memory", "1g")
-    conf.set("spark.executor.memory", "1g")
-    conf.set("spark.sql.execution.arrow.pyspark.enabled", "false")  # Disable Arrow for compatibility
-    
-    # Windows-specific Spark configurations to fix hostname issues
-    conf.set("spark.driver.host", "localhost")
-    conf.set("spark.driver.bindAddress", "localhost")
-    conf.set("spark.master", "local[*]")
-    conf.set("spark.executor.extraJavaOptions", "-Djava.net.preferIPv4Stack=true")
-    conf.set("spark.driver.extraJavaOptions", "-Djava.net.preferIPv4Stack=true")
-    
-    # Disable problematic Spark UI to avoid port conflicts
-    conf.set("spark.ui.enabled", "false")
-    
-    # Disable automatic cleanup that causes Windows issues
-    conf.set("spark.cleaner.referenceTracking.blocking", "false")
-    conf.set("spark.cleaner.referenceTracking.blocking.shuffle", "false")
-    conf.set("spark.cleaner.periodicGC.interval", "30min")
-    
-    # Simplified temp directory configuration
-    conf.set("spark.local.dir", bundle_root.replace("\\\\", "/") + "/temp/spark")
-    conf.set("spark.sql.warehouse.dir", bundle_root.replace("\\\\", "/") + "/temp/spark/warehouse")
-    
-    # Set Hadoop home directory to avoid warnings (required for Windows)
-    hadoop_home = spark_home
-    os.environ["HADOOP_HOME"] = hadoop_home
-    os.environ["HADOOP_CONF_DIR"] = os.path.join(hadoop_home, "conf")
-    
-    # Ensure Hadoop bin directory is in PATH for Windows
-    hadoop_bin = os.path.join(hadoop_home, "bin")
-    current_path = os.environ.get("PATH", "")
-    if hadoop_bin not in current_path:
-        os.environ["PATH"] = hadoop_bin + os.pathsep + current_path
-    
-    # Create Spark session
-    spark = SparkSession.builder.config(conf=conf).getOrCreate()
-    
-    # Test connection with SQL Server
-    jdbc_url = "jdbc:sqlserver://${config.host}:${config.port};databaseName=${config.database};encrypt=true;trustServerCertificate=true"
-    connection_properties = {
-        "user": "${config.username}",
-        "password": "${config.password}",
-        "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"
-    }
-    
-    # Test connection by reading from INFORMATION_SCHEMA.TABLES
-    test_query = "(SELECT TOP 1 TABLE_NAME FROM INFORMATION_SCHEMA.TABLES) AS test"
-    test_df = spark.read.jdbc(jdbc_url, test_query, properties=connection_properties)
-    test_count = test_df.count()
-    
-    print(json.dumps({
-        "success": True, 
-        "sessionId": "${sessionId}",
-        "message": "Spark connection established successfully",
-        "sparkVersion": spark.version,
-        "testCount": test_count,
-        "javaHome": os.environ.get("JAVA_HOME"),
-        "sparkHome": os.environ.get("SPARK_HOME")
-    }))
-    
-except ImportError as e:
-    print(json.dumps({"success": False, "error": f"PySpark import failed: {str(e)}"}))
-    sys.exit(1)
-except Exception as e:
-    print(json.dumps({"success": False, "error": f"Spark connection failed: {str(e)}"}))
-    sys.exit(1)
-finally:
-    if 'spark' in locals():
-        spark.stop()
-`
-
-    // Write the script to a temporary file
-    const tempDir = path.join(__dirname, '..', 'temp')
-    await fs.promises.mkdir(tempDir, { recursive: true })
-    const scriptPath = path.join(tempDir, `spark_connect_${sessionId}.py`)
-    await fs.promises.writeFile(scriptPath, sparkScript)
-    
-    // Execute the script with bundled Python
+    // Use the dedicated Spark connection script
     const pythonExe = path.join(__dirname, '..', 'bundled-runtime', 'python', 'python.exe')
+    const scriptPath = path.join(__dirname, '..', 'python', 'spark-scripts', 'spark_connection.py')
     
     return new Promise((resolve, reject) => {
-      const process = spawn(pythonExe, [scriptPath], {
+      const process = spawn(pythonExe, [scriptPath, JSON.stringify(config)], {
         cwd: path.join(__dirname, '..')
       })
       
@@ -890,21 +737,10 @@ finally:
       })
       
       process.on('close', (code) => {
-        // Clean up temp file
-        fs.promises.unlink(scriptPath).catch(() => {})
-        
         if (code === 0 && output.trim()) {
           try {
-            // Extract JSON from output (filter out debug messages)
-            const lines = output.trim().split('\n')
-            const jsonLine = lines.find(line => line.trim().startsWith('{'))
-            
-            if (jsonLine) {
-              const result = JSON.parse(jsonLine.trim())
-              resolve(result)
-            } else {
-              reject(new Error(`No JSON output found in Spark response: ${output}`))
-            }
+            const result = JSON.parse(output.trim())
+            resolve(result)
           } catch (parseError) {
             reject(new Error(`Failed to parse Spark output: ${output}`))
           }
@@ -930,83 +766,12 @@ ipcMain.handle('spark:get-tables', async (event, sessionId, config) => {
     const { spawn } = require('child_process')
     const path = require('path')
     
-    // Use direct database connection for table listing - more reliable than Spark
-    const sparkScript = `
-import sys
-import os
-import json
-import pyodbc
-
-try:
-    # Direct SQL Server connection without Spark
-    connection_string = f"DRIVER={{{{ODBC Driver 17 for SQL Server}}}};SERVER=${config.host},{config.port};DATABASE=${config.database};UID=${config.username};PWD=${config.password};Encrypt=yes;TrustServerCertificate=yes"
-    
-    # Try to connect directly
-    conn = pyodbc.connect(connection_string)
-    cursor = conn.cursor()
-    
-    # Query to get all tables
-    query = """
-        SELECT 
-            COALESCE(TABLE_SCHEMA, 'dbo') as schema_name,
-            TABLE_NAME as table_name
-        FROM INFORMATION_SCHEMA.TABLES 
-        WHERE TABLE_TYPE = 'BASE TABLE'
-        ORDER BY TABLE_SCHEMA, TABLE_NAME
-    """
-    
-    cursor.execute(query)
-    rows = cursor.fetchall()
-    
-    tables = []
-    for row in rows:
-        tables.append({
-            "schema": row.schema_name if row.schema_name else "dbo",
-            "name": row.table_name,
-            "type": "BASE TABLE"
-        })
-    
-    result = {
-        "success": True, 
-        "tables": tables,
-        "count": len(tables),
-        "method": "direct_odbc"
-    }
-    
-    print(json.dumps(result))
-    
-    cursor.close()
-    conn.close()
-    
-except ImportError:
-    # Fallback to Spark if pyodbc is not available
-    print(json.dumps({
-        "success": False, 
-        "error": "pyodbc not available, falling back to Spark method",
-        "fallback_required": True
-    }))
-    sys.exit(2)  # Special exit code for fallback
-    
-except Exception as e:
-    # If direct connection fails, we'll need to use Spark
-    print(json.dumps({
-        "success": False, 
-        "error": f"Direct connection failed: {str(e)}",
-        "fallback_required": True
-    }))
-    sys.exit(2)  # Special exit code for fallback
-`
-
-    // Write and execute the script
-    const tempDir = path.join(__dirname, '..', 'temp')
-    await fs.promises.mkdir(tempDir, { recursive: true })
-    const scriptPath = path.join(tempDir, `spark_tables_${sessionId}.py`)
-    await fs.promises.writeFile(scriptPath, sparkScript)
-    
+    // Use the clean wrapper that suppresses Java warnings
     const pythonExe = path.join(__dirname, '..', 'bundled-runtime', 'python', 'python.exe')
+    const scriptPath = path.join(__dirname, '..', 'python', 'spark-scripts', 'spark_table_operations_clean.py')
     
     return new Promise((resolve, reject) => {
-      const process = spawn(pythonExe, [scriptPath], {
+      const process = spawn(pythonExe, [scriptPath, JSON.stringify(config), 'list_tables'], {
         cwd: path.join(__dirname, '..')
       })
       
@@ -1022,32 +787,16 @@ except Exception as e:
       })
       
       process.on('close', (code) => {
-        // Clean up temp file
-        fs.promises.unlink(scriptPath).catch(() => {})
-        
-        if (code === 0 && output.trim()) {
+        if (output.trim()) {
           try {
-            // Extract JSON from output (filter out debug messages)
-            const lines = output.trim().split('\n')
-            const jsonLine = lines.find(line => line.trim().startsWith('{'))
-            
-            if (jsonLine) {
-              const result = JSON.parse(jsonLine.trim())
-              resolve(result)
-            } else {
-              reject(new Error(`No JSON output found in response: ${output}`))
-            }
+            const result = JSON.parse(output.trim())
+            resolve(result)
           } catch (parseError) {
             reject(new Error(`Failed to parse output: ${output}`))
           }
-        } else if (code === 2) {
-          // Fallback required - try Spark method
-          console.log('Direct connection failed, trying Spark fallback...')
-          trySparkFallback(config, sessionId, tempDir, pythonExe)
-            .then(resolve)
-            .catch(reject)
         } else {
-          reject(new Error(`Table query failed (code ${code}): ${errors || output}`))
+          // For clean wrapper, we rely on the JSON output even if exit code is non-zero
+          reject(new Error(`Table query failed: No output received${errors ? ` (${errors})` : ''}`))
         }
       })
       
@@ -1066,6 +815,76 @@ ipcMain.handle('spark:export-csv', async (event, { sessionId, filename, content,
   try {
     console.log('Spark: Exporting CSV for session:', sessionId)
     
+    // Use the dedicated Spark export script for CSV generation
+    const { spawn } = require('child_process')
+    const path = require('path')
+    
+    // Prepare export configuration
+    const exportConfig = {
+      type: "metadata",
+      filename: filename,
+      metadata: metadata
+    }
+    
+    // If we have a database config in metadata, we can use the script
+    if (metadata.dbConfig) {
+      const pythonExe = path.join(__dirname, '..', 'bundled-runtime', 'python', 'python.exe')
+      const scriptPath = path.join(__dirname, '..', 'python', 'spark-scripts', 'spark_export.py')
+      
+      return new Promise((resolve, reject) => {
+        const process = spawn(pythonExe, [scriptPath, JSON.stringify(metadata.dbConfig), JSON.stringify(exportConfig)], {
+          cwd: path.join(__dirname, '..')
+        })
+        
+        let output = ''
+        let errors = ''
+        
+        process.stdout.on('data', (data) => {
+          output += data.toString()
+        })
+        
+        process.stderr.on('data', (data) => {
+          errors += data.toString()
+        })
+        
+        process.on('close', (code) => {
+          if (code === 0 && output.trim()) {
+            try {
+              const result = JSON.parse(output.trim())
+              if (result.success) {
+                // Save the generated content to file
+                _saveExportToFile(result.content, filename, result.metadata)
+                  .then(filePath => resolve({ success: true, filePath }))
+                  .catch(reject)
+              } else {
+                reject(new Error(result.error))
+              }
+            } catch (parseError) {
+              reject(new Error(`Failed to parse export output: ${output}`))
+            }
+          } else {
+            reject(new Error(`Export failed (code ${code}): ${errors || output}`))
+          }
+        })
+        
+        process.on('error', (error) => {
+          reject(error)
+        })
+      })
+    } else {
+      // Fallback to direct file save (for backward compatibility)
+      return _saveExportToFile(content, filename, metadata)
+    }
+    
+  } catch (error) {
+    console.error('Error exporting CSV:', error)
+    return { success: false, error: error.message }
+  }
+})
+
+// Helper function to save export content to file
+async function _saveExportToFile(content, filename, metadata) {
+  try {
     // Ensure Documents directory exists
     const documentsPath = path.join(os.homedir(), 'Documents')
     const toolDirectory = path.join(documentsPath, 'SparkMigrationTool')
@@ -1080,7 +899,7 @@ ipcMain.handle('spark:export-csv', async (event, { sessionId, filename, content,
 # Host: ${metadata.host}
 # Table Count: ${metadata.tableCount}
 # Exported: ${metadata.exportedAt}
-# Session: ${sessionId}
+# Session: ${metadata.sessionId || 'unknown'}
 #
 `
     const fullContent = metadataHeader + content
@@ -1091,10 +910,10 @@ ipcMain.handle('spark:export-csv', async (event, { sessionId, filename, content,
     return { success: true, filePath }
     
   } catch (error) {
-    console.error('Error exporting CSV:', error)
-    return { success: false, error: error.message }
+    console.error('Error saving export file:', error)
+    throw error
   }
-})
+}
 
 ipcMain.handle('spark:disconnect', async (event, sessionId) => {
   try {
@@ -1107,124 +926,6 @@ ipcMain.handle('spark:disconnect', async (event, sessionId) => {
   }
 })
 
-// Fallback function to try Spark when direct connection fails
-async function trySparkFallback(dbConfig, sessionId, tempDir, pythonExe) {
-  const { spawn } = require('child_process')
-  const path = require('path')
-  const fs = require('fs')
-  
-  const fallbackScript = `
-import sys
-import os
-import json
-from pathlib import Path
-
-# Add the bundled runtime to Python path
-bundle_root = r"${path.join(__dirname, '..', 'bundled-runtime').replace(/\\/g, '\\\\')}"
-sys.path.insert(0, os.path.join(bundle_root, "scripts"))
-
-try:
-    # Import runtime manager
-    from runtime_manager import get_runtime_manager
-    
-    # Initialize runtime
-    runtime = get_runtime_manager()
-    runtime.setup_environment()
-    
-    # Import findspark and initialize
-    import findspark
-    findspark.init(runtime.get_spark_home())
-    
-    # Try a very minimal Spark approach
-    os.environ["PYSPARK_PYTHON"] = sys.executable
-    os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
-    
-    from pyspark.sql import SparkSession
-    
-    # Find SQL Server JDBC driver
-    drivers_path = os.path.join(bundle_root, "drivers")
-    mssql_jar = None
-    for file in os.listdir(drivers_path):
-        if file.startswith("mssql-jdbc") and file.endswith(".jar"):
-            mssql_jar = os.path.join(drivers_path, file)
-            break
-    
-    if not mssql_jar:
-        raise Exception("SQL Server JDBC driver not found")
-    
-    # Minimal Spark session with JDBC driver
-    spark = SparkSession.builder \\
-        .appName("FallbackQuery") \\
-        .config("spark.jars", mssql_jar) \\
-        .getOrCreate()
-    spark.sparkContext.setLogLevel("FATAL")  # Minimum logging
-    
-    # Database connection
-    jdbc_url = "jdbc:sqlserver://${dbConfig.host}:${dbConfig.port};databaseName=${dbConfig.database};encrypt=true;trustServerCertificate=true;loginTimeout=5"
-    properties = {
-        "user": "${dbConfig.username}",
-        "password": "${dbConfig.password}",
-        "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"
-    }
-    
-    # Simple table query
-    query = "(SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE') tables"
-    df = spark.read.jdbc(jdbc_url, query, properties=properties)
-    rows = df.collect()
-    
-    tables = [{"schema": row.TABLE_SCHEMA or "dbo", "name": row.TABLE_NAME, "type": "BASE TABLE"} for row in rows]
-    
-    print(json.dumps({"success": True, "tables": tables, "count": len(tables), "method": "spark_fallback"}))
-    
-except Exception as e:
-    print(json.dumps({"success": False, "error": f"Spark fallback failed: {str(e)}"}))
-    sys.exit(1)
-`
-  
-  const fallbackScriptPath = path.join(tempDir, `spark_fallback_${sessionId}.py`)
-  await fs.promises.writeFile(fallbackScriptPath, fallbackScript)
-  
-  return new Promise((resolve, reject) => {
-    const fallbackProcess = spawn(pythonExe, [fallbackScriptPath], {
-      cwd: path.join(__dirname, '..')
-    })
-    
-    let fallbackOutput = ''
-    let fallbackErrors = ''
-    
-    fallbackProcess.stdout.on('data', (data) => {
-      fallbackOutput += data.toString()
-    })
-    
-    fallbackProcess.stderr.on('data', (data) => {
-      fallbackErrors += data.toString()
-    })
-    
-    fallbackProcess.on('close', (code) => {
-      fs.promises.unlink(fallbackScriptPath).catch(() => {})
-      
-      if (code === 0 && fallbackOutput.trim()) {
-        try {
-          const lines = fallbackOutput.trim().split('\n')
-          const jsonLine = lines.find(line => line.trim().startsWith('{'))
-          if (jsonLine) {
-            resolve(JSON.parse(jsonLine.trim()))
-          } else {
-            reject(new Error('No valid JSON in fallback output'))
-          }
-        } catch (e) {
-          reject(new Error('Failed to parse fallback output'))
-        }
-      } else {
-        reject(new Error(`Fallback failed (code ${code}): ${fallbackErrors || fallbackOutput}`))
-      }
-    })
-    
-    fallbackProcess.on('error', (error) => {
-      reject(error)
-    })
-  })
-}
 
 console.log('IPC handlers registered successfully')
 
