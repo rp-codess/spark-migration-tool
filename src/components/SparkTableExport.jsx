@@ -23,11 +23,11 @@ const SparkTableExport = () => {
     // Salem database configuration
     const dbConfig = {
         type: "mssql",
-        host: "salemseats-prod-clone.database.windows.net",
+        host: "",
         port: "1433",
-        database: "salemseats-prod-clone",
-        username: "appuser",
-        password: "Salem@1234",
+        database: "",
+        username: "",
+        password: "",
         schema: "",
         ssl: true,
         sslMode: "prefer",

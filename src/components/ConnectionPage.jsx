@@ -302,9 +302,9 @@ export default function ConnectionPage({ onConnect, onNavigateToRuntime, onNavig
                 setConfig({
                   ...config,
                   type: 'mssql',
-                  host: 'salemseats-prod-clone.database.windows.net',
+                  host: '',
                   port: '1433',
-                  database: 'salemseats-prod-clone',
+                  database: '',
                   username: 'appuser',
                   ssl: true
                 })
