@@ -6,7 +6,7 @@ import ThemeToggle from './ui/ThemeToggle'
 import SavedConnectionsModal from './SavedConnectionsModal'
 import ConnectionSaver from './ConnectionSaver'
 
-export default function ConnectionPage({ onConnect }) {
+export default function ConnectionPage({ onConnect, onNavigateToRuntime }) {
   const [config, setConfig] = useState({
     type: 'mssql',
     host: '',
@@ -153,14 +153,24 @@ export default function ConnectionPage({ onConnect }) {
           <p style={{ color: 'var(--text-secondary)', margin: 0, marginBottom: '16px' }}>
             Connect to your database to get started
           </p>
-          <Button
-            onClick={() => setShowSavedConnections(true)}
-            variant="outline"
-            size="sm"
-            icon={<FolderOpenOutlined />}
-          >
-            View Saved Connections
-          </Button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '16px' }}>
+            <Button
+              onClick={() => setShowSavedConnections(true)}
+              variant="outline"
+              size="sm"
+              icon={<FolderOpenOutlined />}
+            >
+              View Saved Connections
+            </Button>
+            <Button
+              onClick={onNavigateToRuntime}
+              variant="outline"
+              size="sm"
+              icon={<RocketOutlined />}
+            >
+              Spark Runtime
+            </Button>
+          </div>
         </div>
 
         {/* Success Message */}

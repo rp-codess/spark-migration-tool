@@ -9,7 +9,12 @@
     "electron": "electron .",
     "electron-dev": "concurrently \"yarn dev\" \"wait-on http://localhost:5173 && yarn electron\"",
     "electron-dev-separate": "start \"Vite Dev\" cmd /k \"yarn dev\" && timeout /t 5 && yarn electron",
-    "build-electron": "npm run build && electron-builder",
+    "build-electron": "yarn build && electron-builder",
+    "setup-runtime": "powershell.exe -ExecutionPolicy Bypass -File bundled-runtime/scripts/setup-runtime.ps1",
+    "setup-runtime-force": "powershell.exe -ExecutionPolicy Bypass -File bundled-runtime/scripts/setup-runtime.ps1 -Force",
+    "install-python-packages": "powershell.exe -ExecutionPolicy Bypass -File bundled-runtime/scripts/install-python-packages.ps1",
+    "start": "yarn electron-dev",
+    "quick-setup": "powershell.exe -ExecutionPolicy Bypass -File quick-start.ps1",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

@@ -4,6 +4,8 @@ const fs = require('fs')
 const os = require('os')
 const crypto = require('crypto')
 const DatabaseManager = require('./database/DatabaseManager')
+const { setupHandlers, initializePythonRuntime } = require('./src/services/ipc-handlers')
+const WindowManager = require('./src/services/window-manager')
 
 // Simple encryption/decryption for passwords
 const ENCRYPTION_KEY = crypto.createHash('sha256').update('spark-migration-tool-secret-key-2024').digest()
@@ -380,9 +382,24 @@ ipcMain.handle('select-file', async (event) => {
 
 console.log('IPC handlers registered successfully')
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   console.log('App is ready, creating window...')
-  createWindow()
+  
+  // Setup IPC handlers
+  setupHandlers()
+  
+  // Initialize Python runtime in background
+  initializePythonRuntime().catch(console.error)
+  
+  // Create main window
+  const windowManager = new WindowManager()
+  windowManager.createMainWindow()
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      windowManager.createMainWindow()
+    }
+  })
 })
 
 app.on('window-all-closed', () => {

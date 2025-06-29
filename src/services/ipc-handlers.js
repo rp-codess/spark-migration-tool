@@ -2,6 +2,7 @@ const { ipcMain } = require('electron')
 const DatabaseManager = require('../database/DatabaseManager')
 const fileManager = require('./file-manager')
 const configManager = require('./config-manager')
+const PythonRuntimeService = require('./python-runtime')
 
 class IPCHandlers {
   /**
@@ -21,6 +22,9 @@ class IPCHandlers {
     
     // Spark job handlers (placeholders)
     this.registerSparkHandlers()
+    
+    // Python Runtime handlers
+    this.registerPythonRuntimeHandlers()
     
     console.log('IPC handlers registered successfully')
   }
@@ -176,6 +180,124 @@ class IPCHandlers {
     ipcMain.handle('select-file', async (event) => {
       console.log('select-file handler called')
       return { success: false, message: 'File selection functionality not implemented yet' }
+    })
+  }
+
+  /**
+   * Registers Python Runtime IPC handlers
+   */
+  registerPythonRuntimeHandlers() {
+    const pythonRuntime = new PythonRuntimeService()
+
+    ipcMain.handle('python-runtime:get-info', async () => {
+      try {
+        return await pythonRuntime.getRuntimeInfo()
+      } catch (error) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    ipcMain.handle('python-runtime:setup', async (event, force = false) => {
+      try {
+        const progressHandler = (data) => {
+          event.sender.send('python-runtime:setup-progress', data)
+        }
+
+        pythonRuntime.on('setup-output', progressHandler)
+
+        const result = await pythonRuntime.setupRuntime(force)
+
+        pythonRuntime.off('setup-output', progressHandler)
+
+        return result
+      } catch (error) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    ipcMain.handle('python-runtime:install-packages', async (event, force = false) => {
+      try {
+        const progressHandler = (data) => {
+          event.sender.send('python-runtime:install-progress', data)
+        }
+
+        pythonRuntime.on('install-output', progressHandler)
+
+        const result = await pythonRuntime.installPythonPackages(force)
+
+        pythonRuntime.off('install-output', progressHandler)
+
+        return result
+      } catch (error) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    ipcMain.handle('python-runtime:schema-comparison', async (event, configData) => {
+      try {
+        const outputHandler = (data) => {
+          event.sender.send('python-runtime:script-output', { 
+            script: 'schema-comparison',
+            ...data 
+          })
+        }
+
+        pythonRuntime.on('output', outputHandler)
+
+        const result = await pythonRuntime.runSchemaComparison(configData)
+
+        pythonRuntime.off('output', outputHandler)
+
+        return result
+      } catch (error) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    ipcMain.handle('python-runtime:data-migration', async (event, configData) => {
+      try {
+        const outputHandler = (data) => {
+          event.sender.send('python-runtime:script-output', { 
+            script: 'data-migration',
+            ...data 
+          })
+        }
+
+        const progressHandler = (data) => {
+          event.sender.send('python-runtime:migration-progress', data)
+        }
+
+        pythonRuntime.on('output', outputHandler)
+
+        const result = await pythonRuntime.runDataMigration(configData, progressHandler)
+
+        pythonRuntime.off('output', outputHandler)
+
+        return result
+      } catch (error) {
+        return { success: false, error: error.message }
+      }
+    })
+
+    ipcMain.handle('python-runtime:execute-script', async (event, scriptName, args = [], options = {}) => {
+      try {
+        const outputHandler = (data) => {
+          event.sender.send('python-runtime:script-output', { 
+            script: scriptName,
+            ...data 
+          })
+        }
+
+        pythonRuntime.on('output', outputHandler)
+
+        const result = await pythonRuntime.executeScript(scriptName, args, options)
+
+        pythonRuntime.off('output', outputHandler)
+
+        return result
+      } catch (error) {
+        return { success: false, error: error.message }
+      }
     })
   }
 }
