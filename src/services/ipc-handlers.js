@@ -302,4 +302,26 @@ class IPCHandlers {
   }
 }
 
-module.exports = new IPCHandlers()
+const ipcHandlers = new IPCHandlers()
+
+// Functions expected by main.js
+function setupHandlers() {
+  ipcHandlers.registerAll()
+}
+
+async function initializePythonRuntime() {
+  try {
+    const pythonRuntime = new PythonRuntimeService()
+    await pythonRuntime.initialize()
+    console.log('Python runtime initialized successfully')
+  } catch (error) {
+    console.error('Failed to initialize Python runtime:', error)
+    throw error
+  }
+}
+
+module.exports = {
+  setupHandlers,
+  initializePythonRuntime,
+  ipcHandlers
+}

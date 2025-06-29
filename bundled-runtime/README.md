@@ -6,17 +6,37 @@ This directory contains all the runtime components needed for the Spark Migratio
 
 ```
 bundled-runtime/
-├── python/                 # Portable Python distribution
-├── java/                   # Portable Java Runtime Environment (JRE)
-├── spark/                  # Apache Spark distribution
-├── drivers/                # JDBC drivers for various databases
-├── scripts/                # Runtime management scripts
-└── config/                 # Runtime configuration files
+├── python/                 # Portable Python distribution ✅
+├── java/                   # Portable Java Runtime Environment (JRE) ✅
+├── spark/                  # Apache Spark distribution ✅
+├── drivers/                # JDBC drivers for various databases ✅
+├── scripts/                # Runtime management scripts ✅
+└── config/                 # Runtime configuration files ✅
 ```
 
-## Download Requirements
+## Current Status: ✅ READY TO USE
 
-The following components need to be downloaded and extracted:
+All runtime components are installed and configured:
+
+- **✅ Python 3.11.7**: Embedded distribution with all required packages
+- **✅ OpenJDK 17 JRE**: Java runtime environment 
+- **✅ Apache Spark 3.5.0**: Distributed computing framework
+- **✅ JDBC Drivers**: SQL Server, PostgreSQL, MySQL, Oracle (4 drivers)
+- **✅ Configuration**: Runtime environment configured
+
+## For End Users
+
+**No setup required!** Simply:
+
+1. Download/clone this project
+2. Run `yarn install` (installs Node.js dependencies only)
+3. Run `yarn electron-dev` to start the application
+
+Everything else is bundled and ready to use.
+
+## For Developers: Manual Setup Reference
+
+If you need to recreate this setup from scratch, here are the original download requirements:
 
 ### Python (Embedded Distribution)
 - Download: Python 3.11 Windows Embeddable Package
@@ -36,13 +56,21 @@ The following components need to be downloaded and extracted:
 - Extract to: `bundled-runtime/spark/`
 
 ### JDBC Drivers
-- SQL Server: mssql-jdbc-12.4.2.jre8.jar
-- PostgreSQL: postgresql-42.2.5.jar
-- Oracle: ojdbc8.jar
-- MySQL: mysql-connector-java-8.0.33.jar
+Download to `bundled-runtime/drivers/`:
+- **SQL Server**: [mssql-jdbc-12.4.2.jre8.jar](https://github.com/microsoft/mssql-jdbc/releases)
+- **PostgreSQL**: [postgresql-42.7.4.jar](https://jdbc.postgresql.org/download.html)
+- **MySQL**: [mysql-connector-j-8.2.0.jar](https://dev.mysql.com/downloads/connector/j/)
+- **Oracle**: [ojdbc11-21.7.0.0.jar](https://www.oracle.com/database/technologies/appdev/jdbc-downloads.html)
 
-## Setup Instructions
+### Automated Setup Scripts
 
-1. Run `scripts/setup-runtime.ps1` to download and configure all components
-2. Run `scripts/install-python-packages.ps1` to install required Python packages
-3. Components will be automatically configured for the application
+The following PowerShell scripts are available in `scripts/` directory:
+
+1. `setup-runtime.ps1` - Downloads and configures all components
+2. `install-python-packages.ps1` - Installs required Python packages
+
+To recreate the setup:
+```powershell
+.\bundled-runtime\scripts\setup-runtime.ps1
+.\bundled-runtime\scripts\install-python-packages.ps1
+```

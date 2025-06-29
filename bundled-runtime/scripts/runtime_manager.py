@@ -49,8 +49,15 @@ class RuntimeManager:
         if drivers_path.exists():
             driver_jars = list(drivers_path.glob('*.jar'))
             if driver_jars:
-                jar_paths = ':'.join(str(jar) for jar in driver_jars)
+                jar_paths = ';'.join(str(jar) for jar in driver_jars)  # Use semicolon for Windows
                 os.environ['SPARK_CLASSPATH'] = jar_paths
+                
+        # Set Windows-specific Spark environment variables
+        os.environ['HADOOP_HOME'] = config.get('HADOOP_HOME', 'C:/temp/hadoop')
+        os.environ['SPARK_LOCAL_DIRS'] = config.get('SPARK_LOCAL_DIRS', 'C:/temp/spark-local')
+        os.environ['TMPDIR'] = 'C:/temp'
+        os.environ['TMP'] = 'C:/temp'
+        os.environ['TEMP'] = 'C:/temp'
                 
         return True
     

@@ -13,7 +13,7 @@ $pythonDir = Join-Path $runtimeDir "python"
 $pythonExe = Join-Path $pythonDir "python.exe"
 $projectRoot = Split-Path -Parent $runtimeDir
 $pythonProjectDir = Join-Path $projectRoot "python"
-$requirementsFile = Join-Path $pythonProjectDir "requirements.txt"
+$requirementsFile = Join-Path $pythonProjectDir "requirements-spark.txt"
 
 # Check if Python is available
 if (!(Test-Path $pythonExe)) {

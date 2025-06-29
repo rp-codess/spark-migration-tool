@@ -3,6 +3,9 @@ const { contextBridge, ipcRenderer } = require('electron')
 console.log('Preload script loading...')
 
 const electronAPI = {
+  // Generic invoke method for flexibility
+  invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
+  
   // Database operations
   connectDatabase: (config) => ipcRenderer.invoke('connect-database', config),
   getTables: () => ipcRenderer.invoke('get-tables'),
@@ -17,6 +20,23 @@ const electronAPI = {
   // Spark operations
   startSparkJob: (jobConfig) => ipcRenderer.invoke('start-spark-job', jobConfig),
   getJobStatus: (jobId) => ipcRenderer.invoke('get-job-status', jobId),
+  
+  // Spark database operations (new)
+  'spark:connect-database': (config) => ipcRenderer.invoke('spark:connect-database', config),
+  'spark:get-tables': (sessionId) => ipcRenderer.invoke('spark:get-tables', sessionId),
+  'spark:export-csv': (data) => ipcRenderer.invoke('spark:export-csv', data),
+  'spark:disconnect': (sessionId) => ipcRenderer.invoke('spark:disconnect', sessionId),
+  
+  // Runtime management operations
+  getRuntimeInfo: () => ipcRenderer.invoke('get-runtime-info'),
+  checkRuntimeComponents: () => ipcRenderer.invoke('check-runtime-components'),
+  setupRuntime: () => ipcRenderer.invoke('setup-runtime'),
+  installPythonPackages: () => ipcRenderer.invoke('install-python-packages'),
+  executePythonScript: (scriptName, args, options) => ipcRenderer.invoke('execute-python-script', scriptName, args, options),
+  
+  // Enhanced Python package management
+  'python-runtime:install-missing-packages': () => ipcRenderer.invoke('python-runtime:install-missing-packages'),
+  'python-runtime:verify-packages': () => ipcRenderer.invoke('python-runtime:verify-packages'),
   
   // New SQL functions
   getTableSQL: (tableName, schemaName) => ipcRenderer.invoke('get-table-sql', tableName, schemaName),

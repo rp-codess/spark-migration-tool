@@ -1,0 +1,40 @@
+{
+  "source_database": {
+    "type": "sqlserver",
+    "jdbc_url": "jdbc:sqlserver://mythicboost-development-server.database.windows.net:1433;database=mythicboost;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30",
+    "properties": {
+      "user": "mythicboostadmin",
+      "password": "mythicboost-p455w0rd",
+      "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+    }
+  },
+  "target_database": {
+    "type": "postgresql",
+    "jdbc_url": "jdbc:postgresql://mythicboost-development-pg-development.postgres.database.azure.com:5432/mythicboost_dev_db",
+    "properties": {
+      "user": "mythicboostdevadmin",
+      "password": "mythicboostdevpassword",
+      "driver": "org.postgresql.Driver"
+    }
+  },
+  "migration_config": {
+    "table_filters": {
+      "exclude_system_tables": true,
+      "exclude_tables": ["sysdiagrams", "__EFMigrationsHistory"],
+      "include_tables": []
+    },
+    "migration_options": {
+      "write_mode": "overwrite",
+      "batch_size": 10000,
+      "read_partitions": 4,
+      "fetch_size": 10000,
+      "add_migration_metadata": true,
+      "transformations": [
+        {
+          "type": "add_row_hash",
+          "columns": []
+        }
+      ]
+    }
+  }
+}

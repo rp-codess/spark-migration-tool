@@ -6,7 +6,7 @@ import ThemeToggle from './ui/ThemeToggle'
 import SavedConnectionsModal from './SavedConnectionsModal'
 import ConnectionSaver from './ConnectionSaver'
 
-export default function ConnectionPage({ onConnect, onNavigateToRuntime }) {
+export default function ConnectionPage({ onConnect, onNavigateToRuntime, onNavigateToSpark }) {
   const [config, setConfig] = useState({
     type: 'mssql',
     host: '',
@@ -169,6 +169,14 @@ export default function ConnectionPage({ onConnect, onNavigateToRuntime }) {
               icon={<RocketOutlined />}
             >
               Spark Runtime
+            </Button>
+            <Button
+              onClick={onNavigateToSpark}
+              variant="primary"
+              size="sm"
+              style={{ background: '#28a745', borderColor: '#28a745' }}
+            >
+              🚀 Spark Export
             </Button>
           </div>
         </div>
