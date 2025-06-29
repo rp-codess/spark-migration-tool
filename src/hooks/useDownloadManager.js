@@ -1,13 +1,17 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { generateConstraintsSQL, generateForeignKeysSQL } from '../utils/sqlGenerators'
 
-export function useDownloadManager(config) {
+export function useDownloadManager(config = {}) {
+  // Always call hooks in the same order
   const [downloading, setDownloading] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState({ current: 0, total: 0 })
   const [downloadCancelled, setDownloadCancelled] = useState(false)
   
   const cancelledRef = useRef(false)
   const abortControllerRef = useRef(null)
+
+  // Memoize config to prevent unnecessary re-renders
+  const stableConfig = useMemo(() => config || {}, [config])
 
   const cancelDownload = () => {
     console.log('Cancel download clicked - immediate action')
@@ -37,7 +41,7 @@ export function useDownloadManager(config) {
       const allSchemas = {}
       
       for (let i = 0; i < tables.length; i++) {
-        if (cancelledRef.current || abortControllerRef.current.signal.aborted) {
+        if (cancelledRef.current || (abortControllerRef.current && abortControllerRef.current.signal.aborted)) {
           console.log('Download cancelled at table', i)
           alert('Download cancelled by user')
           return
@@ -79,15 +83,15 @@ export function useDownloadManager(config) {
       if (!cancelledRef.current) {
         console.log('Saving combined schema file')
         const schemaData = {
-          database: config.database,
-          host: config.host,
-          type: config.type,
+          database: stableConfig.database,
+          host: stableConfig.host,
+          type: stableConfig.type,
           exportDate: new Date().toISOString(),
           totalTables: tables.length,
           tables: allSchemas
         }
 
-        const result = await window.electronAPI.saveSchemaToFile(schemaData, `${config.database}_all_schemas.json`)
+        const result = await window.electronAPI.saveSchemaToFile(schemaData, `${stableConfig.database}_all_schemas.json`)
         if (result.success) {
           alert(`All schemas downloaded successfully!\nSaved to: ${result.filePath}`)
         } else {
@@ -119,9 +123,9 @@ export function useDownloadManager(config) {
     
     try {
       const folderData = {
-        database: config.database,
-        host: config.host,
-        type: config.type,
+        database: stableConfig.database,
+        host: stableConfig.host,
+        type: stableConfig.type,
         exportDate: new Date().toISOString(),
         totalTables: tables.length
       }
@@ -130,7 +134,7 @@ export function useDownloadManager(config) {
       let errors = []
 
       for (let i = 0; i < tables.length; i++) {
-        if (cancelledRef.current || abortControllerRef.current.signal.aborted) {
+        if (cancelledRef.current || (abortControllerRef.current && abortControllerRef.current.signal.aborted)) {
           console.log('Download cancelled at table', i)
           alert(`Download cancelled by user.\nDownloaded ${successCount}/${tables.length} files before cancellation.`)
           return
@@ -167,7 +171,7 @@ export function useDownloadManager(config) {
               }
             }
 
-            const folderPath = `${config.database}_schemas/${table.schema}_${table.name}.json`
+            const folderPath = `${stableConfig.database}_schemas/${table.schema}_${table.name}.json`
             const saveResult = await window.electronAPI.saveSchemaToFile(tableSchemaData, folderPath)
             
             if (saveResult.success) {
@@ -191,7 +195,7 @@ export function useDownloadManager(config) {
         if (errors.length > 0) {
           alert(`Download completed with issues:\nSuccessful: ${successCount}/${tables.length}\nErrors: ${errors.length}\n\nFirst few errors:\n${errors.slice(0, 3).join('\n')}`)
         } else {
-          alert(`All ${successCount} schemas downloaded successfully!\nSaved to: Documents/SparkMigrationTool/${config.database}_schemas/`)
+          alert(`All ${successCount} schemas downloaded successfully!\nSaved to: Documents/SparkMigrationTool/${stableConfig.database}_schemas/`)
         }
       }
     } catch (err) {
@@ -222,7 +226,7 @@ export function useDownloadManager(config) {
       let errors = []
 
       for (let i = 0; i < tables.length; i++) {
-        if (cancelledRef.current || abortControllerRef.current.signal.aborted) {
+        if (cancelledRef.current || (abortControllerRef.current && abortControllerRef.current.signal.aborted)) {
           console.log('Download cancelled at table', i)
           alert(`SQL download cancelled by user.\nDownloaded ${successCount}/${tables.length} files before cancellation.`)
           return
@@ -310,9 +314,9 @@ export function useDownloadManager(config) {
     
     try {
       const schemaData = {
-        database: config.database,
-        host: config.host,
-        type: config.type,
+        database: stableConfig.database,
+        host: stableConfig.host,
+        type: stableConfig.type,
         exportDate: new Date().toISOString(),
         table: {
           name: selectedTable.name,

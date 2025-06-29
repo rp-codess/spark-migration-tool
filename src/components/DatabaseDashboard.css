@@ -1,16 +1,80 @@
+/* OPTIMIZED HORIZONTAL SCROLLING - REDUCED GPU USAGE */
+
+/* Performance Optimizations */
+:root {
+  --transition-fast: 0.1s ease;
+  --transition-normal: 0.2s ease;
+  --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Reduce heavy animations and transitions */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Optimize scrolling performance */
+.tables-list,
+.table-scroll-container {
+  scroll-behavior: auto; /* Remove smooth scrolling for better performance */
+}
+
+/* Table scrolling container specific */
+.table-scroll-container {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  width: 100%;
+}
+
+.table-scroll-container table {
+  min-width: max-content;
+  width: auto;
+  table-layout: auto;
+}
+
 .database-dashboard {
   min-height: 100vh;
   background-color: var(--bg-secondary);
+  overflow-x: hidden; /* Prevent horizontal scroll at dashboard level */
+  width: 100%;
+  position: static !important; /* Ensure this doesn't create a stacking context that interferes */
+  /* Ensure no transform that might interfere with fixed positioning */
+  transform: none !important;
+  contain: none !important; /* Remove contain to prevent interference */
 }
 
+/* Force header to be absolutely fixed at top */
+body:has(.database-dashboard) {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Ensure the header is at the root level positioning */
 .dashboard-header {
   background: var(--gradient-primary);
   color: white;
   padding: 20px;
   box-shadow: var(--shadow-lg);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 9999 !important; /* Extremely high z-index */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  width: 100vw !important; /* Use viewport width */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  /* Force fixed positioning and prevent any scrolling */
+  transform: none !important;
+  -webkit-transform: none !important;
+  contain: none !important; /* Remove contain to prevent stacking context issues */
+  will-change: auto !important;
+  /* Additional overrides */
+  display: block !important;
+  overflow: visible !important;
+  /* Ensure it's always on top */
+  isolation: isolate !important;
 }
 
 .header-content {
@@ -19,6 +83,8 @@
   align-items: center;
   max-width: 1200px;
   margin: 0 auto;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .header-info {
@@ -42,6 +108,58 @@
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Ant Design Integration Styles */
+.header-actions .ant-btn {
+  height: 36px;
+  border-radius: 6px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-actions .ant-dropdown-trigger {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.header-actions .ant-dropdown-trigger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+/* Custom dropdown menu styling */
+.ant-dropdown-menu {
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ant-dropdown-menu-item {
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 2px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ant-dropdown-menu-item:hover {
+  background: rgba(24, 144, 255, 0.1);
+}
+
+.ant-dropdown-menu-item-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ant-dropdown-menu-item-disabled:hover {
+  background: transparent;
 }
 
 .download-dropdown {
@@ -58,8 +176,11 @@
   box-shadow: var(--shadow-lg);
   z-index: 1001; /* Higher than backdrop */
   min-width: 250px;
+  max-width: 300px;
   margin-top: 4px;
   overflow: hidden;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .dropdown-item {
@@ -70,7 +191,7 @@
   text-align: left;
   cursor: pointer;
   color: var(--text-primary);
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-fast);
   display: block;
   font-family: inherit;
   font-size: 14px;
@@ -116,6 +237,8 @@
 .progress-section {
   max-width: 1200px;
   margin: 16px auto 0 auto;
+  padding: 0 20px;
+  overflow: hidden;
 }
 
 .progress-header {
@@ -161,7 +284,9 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  padding-top: 140px !important; /* Increase space for fixed header */
   min-height: calc(100vh - 140px);
+  overflow-x: hidden; /* Prevent horizontal scrolling at main content level */
 }
 
 .stats-grid {
@@ -205,16 +330,26 @@
   box-shadow: var(--shadow-md);
   overflow: hidden;
   border: 1px solid var(--border-color);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0; /* Allow shrinking */
 }
 
 .explorer-layout {
   display: flex;
   height: 600px;
+  overflow: hidden; /* Prevent the entire layout from scrolling */
+  width: 100%;
 }
 
 .tables-sidebar {
   width: 350px;
+  min-width: 300px;
+  max-width: 400px;
   border-right: 1px solid var(--border-color);
+  flex-shrink: 0; /* Prevent sidebar from shrinking */
+  overflow-y: auto; /* Only allow vertical scrolling for sidebar */
+  overflow-x: hidden; /* Prevent horizontal scrolling in sidebar */
 }
 
 .sidebar-header {
@@ -246,7 +381,7 @@
   border: 1px solid var(--border-color);
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color var(--transition-fast);
 }
 
 .refresh-button:hover {
@@ -288,7 +423,7 @@
   border-radius: 8px;
   margin-bottom: 4px;
   border: 2px solid transparent;
-  transition: all 0.2s ease;
+  transition: background-color var(--transition-fast);
   color: var(--text-primary);
 }
 
@@ -361,6 +496,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0; /* Important for flex children */
+  overflow: hidden; /* Prevent overflow from bubbling up */
 }
 
 .schema-header {
@@ -370,6 +507,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0; /* Prevent header from shrinking */
+  min-width: 0; /* Allow flex content to shrink */
+  overflow: hidden; /* Prevent header content from overflowing */
 }
 
 .schema-title {
@@ -380,9 +520,63 @@
 
 .schema-content {
   flex: 1;
-  overflow-y: auto;
+  min-width: 0; /* Allow content to shrink below its min content width */
+  overflow: hidden; /* Prevent this container from scrolling */
   background-color: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
 }
+
+/* Prevent button overflow in schema header */
+.schema-header .view-toggle {
+  flex-shrink: 0;
+  display: flex;
+  gap: 4px;
+}
+
+.schema-header .schema-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+}
+
+.schema-header .schema-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* Enhanced table scrolling rules - ONLY for table content */
+.table-scroll-container {
+  overflow: auto; /* Allow both horizontal and vertical scrolling for table */
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  width: 100%;
+  flex: 1; /* Take remaining space */
+  min-height: 0; /* Allow shrinking */
+}
+
+.table-scroll-container table {
+  min-width: max-content;
+  width: auto;
+  table-layout: auto; /* Allow natural column sizing */
+}
+
+.table-scroll-container th,
+.table-scroll-container td {
+  min-width: 150px; /* Reduce minimum width for better fit */
+  max-width: 300px; /* Set reasonable max width */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 8px 12px;
+}
+
+/* Force horizontal scrolling when needed */
 
 .schema-table {
   width: 100%;
@@ -483,16 +677,38 @@
   opacity: 0.9;
 }
 
+/* Prevent layout thrashing */
+.tables-list,
+.schema-content,
+.table-scroll-container {
+  contain: layout style; /* Isolate layout calculations */
+}
+
+/* Optimize text rendering */
+.table-name,
+.table-schema,
+.schema-title {
+  contain: layout;
+  will-change: auto; /* Remove unnecessary GPU layers */
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;
     gap: 16px;
     text-align: center;
+    padding: 0 16px;
   }
   
   .header-actions {
     justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .main-content {
+    padding: 16px;
+    padding-top: 140px; /* More space for mobile header which might be taller */
   }
   
   .explorer-layout {
@@ -502,6 +718,8 @@
   
   .tables-sidebar {
     width: 100%;
+    min-width: auto;
+    max-width: none;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
   }
@@ -512,5 +730,21 @@
   
   .schema-content {
     height: 400px;
+  }
+}
+
+/* Tablet Responsiveness */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .header-content {
+    gap: 12px;
+  }
+  
+  .header-actions {
+    flex-wrap: wrap;
+  }
+  
+  .tables-sidebar {
+    width: 300px;
+    min-width: 250px;
   }
 }

@@ -1,0 +1,130 @@
+/* Performance Optimizations to prevent glitches and blinking */
+
+/* GPU Acceleration for smooth animations */
+.database-dashboard,
+.main-content,
+.explorer-card,
+.stats-grid,
+.stat-card,
+.tables-sidebar,
+.schema-content {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: auto;
+}
+
+/* Prevent layout shifts during loading */
+.loading-state {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  contain: layout;
+}
+
+/* Stable table layouts */
+.table-scroll-container {
+  contain: layout style;
+  overflow: auto;
+  position: relative;
+}
+
+.table-scroll-container table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Prevent reflow during animations */
+.animate-fadeIn,
+.animate-slideInDown,
+.animate-scaleIn {
+  animation-fill-mode: both;
+  contain: layout style;
+}
+
+/* Optimize re-rendering */
+.table-item,
+.stat-card,
+.schema-card {
+  contain: layout;
+  isolation: isolate;
+}
+
+/* Prevent scrollbar glitches */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Optimize text rendering */
+.table-name,
+.table-schema,
+.schema-field-name,
+.data-cell {
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent flash of unstyled content */
+.app {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition-property: background-color, color, border-color;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+/* Disable transitions during initial load to prevent flashing */
+.preload * {
+  transition: none !important;
+}
+
+/* Optimize button interactions */
+button,
+.btn,
+[role="button"] {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout;
+}
+
+/* Prevent content jumping */
+.sidebar-header,
+.stats-grid,
+.explorer-layout {
+  position: relative;
+  contain: layout;
+}
+
+/* Optimize modal/overlay rendering */
+.modal-overlay,
+.tooltip,
+.dropdown {
+  contain: layout style;
+  isolation: isolate;
+}

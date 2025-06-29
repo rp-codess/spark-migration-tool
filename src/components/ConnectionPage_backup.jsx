@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { DatabaseOutlined, FolderOpenOutlined, LockOutlined, CloudOutlined, CloseCircleOutlined, CheckCircleOutlined, RocketOutlined } from '@ant-design/icons'
 import Button from './ui/Button'
-import Loader from './ui/Loader'
 import ThemeToggle from './ui/ThemeToggle'
 import SavedConnectionsModal from './SavedConnectionsModal'
 import ConnectionSaver from './ConnectionSaver'
@@ -312,10 +311,10 @@ export default function ConnectionPage({ onConnect }) {
           <Button 
             onClick={handleConnect}
             disabled={connecting || !config.host || !config.database || !config.username || !config.password}
-            loading={false} // Disable built-in loading, use custom loader
+            loading={connecting}
             size="lg"
             style={{ marginTop: '8px' }}
-            icon={connecting ? <Loader size="small" text="" spinning={true} inline={true} /> : <DatabaseOutlined />}
+            icon={<DatabaseOutlined />}
           >
             {connecting ? 'Connecting...' : 'Connect to Database'}
           </Button>

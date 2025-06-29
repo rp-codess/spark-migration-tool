@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { memo, useMemo } from 'react'
 import SearchInput from '../ui/SearchInput'
+import Loader from '../ui/Loader'
 import { getHighlightedTextParts } from '../../utils/textUtils'
 
 // Helper function to render highlighted text
@@ -15,7 +16,7 @@ const renderHighlightedText = (text, searchTerm) => {
   )
 }
 
-export default function TablesSidebar({
+export default memo(function TablesSidebar({
   filteredTables,
   searchTerm,
   loading,
@@ -26,6 +27,23 @@ export default function TablesSidebar({
   onRefresh,
   onTableSelect
 }) {
+  // Memoize the table list to prevent unnecessary re-renders
+  const tableList = useMemo(() => {
+    return filteredTables.map((table, index) => (
+      <div 
+        key={`${table.schema}.${table.name}`}
+        className={`table-item ${selectedTable?.name === table.name ? 'selected' : ''}`}
+        onClick={() => onTableSelect(table)}
+      >
+        <div className="table-name">
+          📊 {renderHighlightedText(table.name, searchTerm)}
+        </div>
+        <div className="table-schema">
+          🏗️ {renderHighlightedText(table.schema, searchTerm)}
+        </div>
+      </div>
+    ))
+  }, [filteredTables, searchTerm, selectedTable, onTableSelect])
   return (
     <div className="tables-sidebar">
       <div className="sidebar-header">
@@ -38,7 +56,8 @@ export default function TablesSidebar({
             onClick={onRefresh} 
             disabled={loading}
           >
-            {loading ? '🔄' : '↻'} Refresh
+            {loading ? <Loader size="small" text="" inline={true} /> : '↻'} 
+            {!loading && ' Refresh'}
           </button>
         </div>
         
@@ -63,25 +82,13 @@ export default function TablesSidebar({
       
       <div className="tables-list">
         {loading && tables.length === 0 ? (
-          <div className="loading-state">
-            <div className="loading-icon">⏳</div>
-            Loading tables...
-          </div>
+          <Loader 
+            text="Loading tables..." 
+            spinning={true}
+            size="default"
+          />
         ) : filteredTables.length > 0 ? (
-          filteredTables.map((table, index) => (
-            <div 
-              key={index}
-              className={`table-item ${selectedTable?.name === table.name ? 'selected' : ''}`}
-              onClick={() => onTableSelect(table)}
-            >
-              <div className="table-name">
-                📊 {renderHighlightedText(table.name, searchTerm)}
-              </div>
-              <div className="table-schema">
-                🏗️ {renderHighlightedText(table.schema, searchTerm)}
-              </div>
-            </div>
-          ))
+          tableList
         ) : searchTerm ? (
           <div className="no-results">
             <div className="no-results-icon">🔍</div>
@@ -103,12 +110,12 @@ export default function TablesSidebar({
             </button>
           </div>
         ) : (
-          <div className="loading-state">
-            <div className="loading-icon">📊</div>
+          <div className="no-tables-state">
+            <div className="no-tables-icon">📊</div>
             No tables available
           </div>
         )}
       </div>
     </div>
   )
-}
+})

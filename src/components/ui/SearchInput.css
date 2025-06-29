@@ -6,6 +6,9 @@
   border: 2px solid var(--border-color);
   border-radius: 8px;
   transition: all 0.2s ease;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .search-input-container:focus-within {
@@ -24,6 +27,7 @@
 
 .search-input {
   width: 100%;
+  max-width: 100%;
   border: none;
   outline: none;
   background: transparent;
@@ -31,6 +35,8 @@
   font-family: inherit;
   padding-left: 36px;
   padding-right: 36px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .search-input::placeholder {

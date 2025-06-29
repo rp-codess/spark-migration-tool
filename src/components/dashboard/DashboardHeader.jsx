@@ -1,6 +1,17 @@
 import React from 'react'
-import Button from '../ui/Button'
+import { Button, Dropdown } from 'antd'
+import { 
+  DownloadOutlined, 
+  DisconnectOutlined,
+  FileTextOutlined,
+  FolderOutlined,
+  DatabaseOutlined,
+  UnorderedListOutlined,
+  NumberOutlined,
+  TableOutlined
+} from '@ant-design/icons'
 import ThemeToggle from '../ui/ThemeToggle'
+import Loader from '../ui/Loader'
 
 export default function DashboardHeader({ 
   config, 
@@ -8,15 +19,93 @@ export default function DashboardHeader({
   downloading, 
   tables, 
   downloadProgress,
+  rowCountProgress,
+  emptyTablesProgress,
+  rowCountCancelled,
+  emptyTablesCancelled,
   downloadCancelled,
   onSingleFileDownload,
   onIndividualFilesDownload,
   onSQLDownload,
   onCancelDownload,
-  onDownloadTablesList
+  onCancelRowCountDownload,
+  onCancelEmptyTablesDownload,
+  onDownloadTablesList,
+  onDownloadTablesWithRowCount,
+  onDownloadEmptyTablesJSON,
+  loading // Add loading prop for row count operations
 }) {
+  const downloadMenuItems = [
+    {
+      key: 'json-single',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FileTextOutlined />
+          <span>JSON Single File</span>
+        </span>
+      ),
+      onClick: onSingleFileDownload,
+      disabled: downloading || loading || tables.length === 0
+    },
+    {
+      key: 'json-individual',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FolderOutlined />
+          <span>JSON Individual Files</span>
+        </span>
+      ),
+      onClick: onIndividualFilesDownload,
+      disabled: downloading || loading || tables.length === 0
+    },
+    {
+      key: 'sql-schemas',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <DatabaseOutlined />
+          <span>SQL Schemas</span>
+        </span>
+      ),
+      onClick: onSQLDownload,
+      disabled: downloading || loading || tables.length === 0
+    },
+    {
+      key: 'tables-list',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <UnorderedListOutlined />
+          <span>Tables List</span>
+        </span>
+      ),
+      onClick: onDownloadTablesList,
+      disabled: downloading || loading || tables.length === 0
+    },
+    {
+      key: 'tables-with-rowcount',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <NumberOutlined />
+          <span>Tables with Row Count</span>
+        </span>
+      ),
+      onClick: onDownloadTablesWithRowCount,
+      disabled: downloading || loading || tables.length === 0
+    },
+    {
+      key: 'empty-tables-json',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <TableOutlined />
+          <span>Empty Tables List</span>
+        </span>
+      ),
+      onClick: onDownloadEmptyTablesJSON,
+      disabled: downloading || loading || tables.length === 0
+    }
+  ]
+
   return (
-    <div className="dashboard-header animate-slideInDown">
+    <div className="dashboard-header">
       <div className="header-content">
         <div className="header-info">
           <h1 className="header-title">
@@ -29,57 +118,52 @@ export default function DashboardHeader({
         <div className="header-actions">
           <ThemeToggle />
           
-          <Button
-            onClick={onSingleFileDownload}
+          <Dropdown
+            menu={{
+              items: downloadMenuItems,
+              onClick: ({ key }) => {
+                const item = downloadMenuItems.find(item => item.key === key)
+                if (item && item.onClick) {
+                  item.onClick()
+                }
+              }
+            }}
             disabled={downloading || tables.length === 0}
-            variant="success"
-            size="sm"
-            icon={downloading ? '⏳' : '📄'}
+            placement="bottomRight"
           >
-            JSON Single
-          </Button>
+            <Button
+              type="primary"
+              icon={downloading || loading || rowCountProgress.total > 0 || emptyTablesProgress.total > 0 ? 
+                <Loader size="small" text="" spinning={true} /> : 
+                <DownloadOutlined />
+              }
+              loading={false} // We handle loading with our custom component
+              disabled={downloading || loading || tables.length === 0}
+              style={{
+                background: (downloading || loading || rowCountProgress.total > 0 || emptyTablesProgress.total > 0) ? '#52c41a' : '#1890ff',
+                borderColor: (downloading || loading || rowCountProgress.total > 0 || emptyTablesProgress.total > 0) ? '#52c41a' : '#1890ff'
+              }}
+              className={downloading || loading || rowCountProgress.total > 0 || emptyTablesProgress.total > 0 ? 'loader-pulse' : ''}
+            >
+              {downloading ? `Downloading (${downloadProgress.current}/${downloadProgress.total})` : 
+               rowCountProgress.total > 0 ? `Row Counts (${rowCountProgress.current}/${rowCountProgress.total})` :
+               emptyTablesProgress.total > 0 ? `Empty Tables (${emptyTablesProgress.current}/${emptyTablesProgress.total})` :
+               loading ? 'Processing Tables...' : 'Download Options'}
+            </Button>
+          </Dropdown>
           
           <Button
-            onClick={onIndividualFilesDownload}
-            disabled={downloading || tables.length === 0}
-            variant="success"
-            size="sm"
-            icon={downloading ? '⏳' : '📁'}
-          >
-            JSON Individual
-          </Button>
-          
-          <Button
-            onClick={onSQLDownload}
-            disabled={downloading || tables.length === 0}
-            variant="primary"
-            size="sm"
-            icon={downloading ? '⏳' : '💾'}
-          >
-            SQL Schemas
-          </Button>
-          
-          <Button
-            onClick={onDownloadTablesList}
-            disabled={downloading || tables.length === 0}
-            variant="info"
-            size="sm"
-            icon={downloading ? '⏳' : '📋'}
-          >
-            Tables List
-          </Button>
-          
-          <Button
+            danger
+            icon={<DisconnectOutlined />}
             onClick={onDisconnect}
-            variant="danger"
-            icon="🔌"
+            style={{ marginLeft: '8px' }}
           >
             Disconnect
           </Button>
         </div>
       </div>
       
-      {/* Progress Bar */}
+      {/* Progress Bar for Main Downloads */}
       {downloading && (
         <div className="progress-section animate-slideInDown">
           <div className="progress-header">
@@ -91,12 +175,12 @@ export default function DashboardHeader({
                 {downloadProgress.total > 0 ? Math.round((downloadProgress.current / downloadProgress.total) * 100) : 0}%
               </span>
               <Button
+                danger
+                size="small"
+                loading={downloadCancelled}
                 onClick={onCancelDownload}
                 disabled={downloadCancelled}
-                variant="danger"
-                size="sm"
-                loading={downloadCancelled}
-                icon="✕"
+                style={{ marginLeft: '8px' }}
               >
                 Cancel
               </Button>
@@ -107,6 +191,74 @@ export default function DashboardHeader({
               className={`progress-fill ${downloadCancelled ? 'warning' : 'success'}`}
               style={{ 
                 width: downloadProgress.total > 0 ? `${(downloadProgress.current / downloadProgress.total) * 100}%` : '0%'
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Progress Bar for Row Count Download */}
+      {rowCountProgress.total > 0 && (
+        <div className="progress-section animate-slideInDown">
+          <div className="progress-header">
+            <span className="progress-text">
+              {rowCountCancelled ? 'Cancelling row count...' : `Getting row counts... (${rowCountProgress.current}/${rowCountProgress.total})`}
+            </span>
+            <div className="progress-actions">
+              <span className="progress-text">
+                {Math.round((rowCountProgress.current / rowCountProgress.total) * 100)}%
+              </span>
+              <Button
+                danger
+                size="small"
+                loading={rowCountCancelled}
+                onClick={onCancelRowCountDownload}
+                disabled={rowCountCancelled}
+                style={{ marginLeft: '8px' }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+          <div className="progress-bar">
+            <div 
+              className={`progress-fill ${rowCountCancelled ? 'warning' : 'success'}`}
+              style={{ 
+                width: `${(rowCountProgress.current / rowCountProgress.total) * 100}%`
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Progress Bar for Empty Tables Search */}
+      {emptyTablesProgress.total > 0 && (
+        <div className="progress-section animate-slideInDown">
+          <div className="progress-header">
+            <span className="progress-text">
+              {emptyTablesCancelled ? 'Cancelling empty tables search...' : `Searching empty tables... (${emptyTablesProgress.current}/${emptyTablesProgress.total})`}
+            </span>
+            <div className="progress-actions">
+              <span className="progress-text">
+                {Math.round((emptyTablesProgress.current / emptyTablesProgress.total) * 100)}%
+              </span>
+              <Button
+                danger
+                size="small"
+                loading={emptyTablesCancelled}
+                onClick={onCancelEmptyTablesDownload}
+                disabled={emptyTablesCancelled}
+                style={{ marginLeft: '8px' }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+          <div className="progress-bar">
+            <div 
+              className={`progress-fill ${emptyTablesCancelled ? 'warning' : 'success'}`}
+              style={{ 
+                width: `${(emptyTablesProgress.current / emptyTablesProgress.total) * 100}%`
               }}
             />
           </div>

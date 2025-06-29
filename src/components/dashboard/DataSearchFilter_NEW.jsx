@@ -14,16 +14,12 @@ export default function DataSearchFilter({
   const [operator, setOperator] = useState('contains')
   const [activeFilters, setActiveFilters] = useState([])
 
+  // Debug: Log when component renders
+  console.log('🔍 DataSearchFilter rendering - tableSchema columns:', tableSchema?.length || 0)
+
   if (!tableSchema || tableSchema.length === 0) {
     return (
-      <div style={{ 
-        padding: '16px', 
-        textAlign: 'center', 
-        color: 'var(--text-secondary)',
-        background: 'var(--bg-secondary)',
-        borderRadius: '8px',
-        border: '1px solid var(--border-color)'
-      }}>
+      <div style={{ padding: '16px', textAlign: 'center', color: '#666' }}>
         No table schema available for searching
       </div>
     )
@@ -43,6 +39,7 @@ export default function DataSearchFilter({
       displayText: `${selectedColumn} ${operator} "${searchValue}"`
     }
 
+    console.log('✅ Adding filter:', newFilter)
     setActiveFilters([...activeFilters, newFilter])
     setSelectedColumn('')
     setSearchValue('')
@@ -58,6 +55,7 @@ export default function DataSearchFilter({
       return
     }
     
+    console.log('🔍 Executing search with filters:', activeFilters)
     onSearch(activeFilters)
   }
 
@@ -71,11 +69,10 @@ export default function DataSearchFilter({
   return (
     <div style={{ 
       padding: '16px', 
-      background: 'var(--bg-primary)', 
-      border: '1px solid var(--border-color)', 
+      background: '#f8f9fa', 
+      border: '1px solid #ddd', 
       borderRadius: '8px',
-      marginBottom: '16px',
-      color: 'var(--text-primary)'
+      marginBottom: '16px'
     }}>
       {/* Header */}
       <div style={{ 
@@ -84,9 +81,7 @@ export default function DataSearchFilter({
         alignItems: 'center',
         marginBottom: '12px'
       }}>
-        <h4 style={{ margin: 0, fontSize: '16px', color: 'var(--text-primary)' }}>
-          🔍 Search & Filter Data
-        </h4>
+        <h4 style={{ margin: 0, fontSize: '16px' }}>🔍 Search & Filter Data</h4>
         <Button
           onClick={() => setShowFilters(!showFilters)}
           variant="primary"
@@ -99,18 +94,17 @@ export default function DataSearchFilter({
       {/* Active Filters Display */}
       {activeFilters.length > 0 && (
         <div style={{ marginBottom: '12px' }}>
-          <strong style={{ color: 'var(--text-primary)' }}>Active Filters:</strong>
+          <strong>Active Filters:</strong>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
             {activeFilters.map((filter) => (
               <div key={filter.id} style={{
-                background: 'var(--color-primary)',
+                background: '#e3f2fd',
                 padding: '4px 8px',
                 borderRadius: '4px',
                 fontSize: '12px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
-                color: 'white'
+                gap: '4px'
               }}>
                 {filter.displayText}
                 <button 
@@ -118,7 +112,7 @@ export default function DataSearchFilter({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: 'white',
+                    color: '#f44336',
                     cursor: 'pointer',
                     fontSize: '14px'
                   }}
@@ -134,22 +128,16 @@ export default function DataSearchFilter({
       {/* Filter Builder */}
       {showFilters && (
         <div style={{ 
-          background: 'var(--bg-secondary)', 
+          background: 'white', 
           padding: '16px', 
-          border: '1px solid var(--border-color)',
+          border: '1px solid #ddd',
           borderRadius: '6px',
           marginBottom: '12px'
         }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr auto', gap: '12px', alignItems: 'end' }}>
             {/* Column Selection */}
             <div>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '4px', 
-                fontSize: '12px', 
-                fontWeight: '500', 
-                color: 'var(--text-primary)' 
-              }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '500' }}>
                 Column
               </label>
               <select 
@@ -158,11 +146,9 @@ export default function DataSearchFilter({
                 style={{
                   width: '100%',
                   padding: '8px',
-                  border: '1px solid var(--border-color)',
+                  border: '1px solid #ddd',
                   borderRadius: '4px',
-                  fontSize: '14px',
-                  backgroundColor: 'var(--bg-primary)',
-                  color: 'var(--text-primary)'
+                  fontSize: '14px'
                 }}
               >
                 <option value="">Select column...</option>
@@ -176,13 +162,7 @@ export default function DataSearchFilter({
 
             {/* Operator Selection */}
             <div>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '4px', 
-                fontSize: '12px', 
-                fontWeight: '500', 
-                color: 'var(--text-primary)' 
-              }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '500' }}>
                 Operator
               </label>
               <select 
@@ -191,11 +171,9 @@ export default function DataSearchFilter({
                 style={{
                   width: '100%',
                   padding: '8px',
-                  border: '1px solid var(--border-color)',
+                  border: '1px solid #ddd',
                   borderRadius: '4px',
-                  fontSize: '14px',
-                  backgroundColor: 'var(--bg-primary)',
-                  color: 'var(--text-primary)'
+                  fontSize: '14px'
                 }}
               >
                 <option value="contains">Contains</option>
@@ -209,13 +187,7 @@ export default function DataSearchFilter({
 
             {/* Value Input */}
             <div>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '4px', 
-                fontSize: '12px', 
-                fontWeight: '500', 
-                color: 'var(--text-primary)' 
-              }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '500' }}>
                 Value
               </label>
               <input
@@ -226,11 +198,9 @@ export default function DataSearchFilter({
                 style={{
                   width: '100%',
                   padding: '8px',
-                  border: '1px solid var(--border-color)',
+                  border: '1px solid #ddd',
                   borderRadius: '4px',
-                  fontSize: '14px',
-                  backgroundColor: 'var(--bg-primary)',
-                  color: 'var(--text-primary)'
+                  fontSize: '14px'
                 }}
               />
             </div>
@@ -269,11 +239,7 @@ export default function DataSearchFilter({
         )}
 
         {searchResults && (
-          <span style={{ 
-            fontSize: '14px', 
-            color: 'var(--color-success)', 
-            fontWeight: '500' 
-          }}>
+          <span style={{ fontSize: '14px', color: '#28a745' }}>
             ✅ Found {searchResults.length} results
           </span>
         )}

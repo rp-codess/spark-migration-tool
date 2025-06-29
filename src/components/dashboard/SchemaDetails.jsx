@@ -1,7 +1,17 @@
-import React, { useState } from 'react'
-import Button from '../ui/Button'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
+import { Button, Dropdown } from 'antd'
+import { 
+  SettingOutlined,
+  NumberOutlined,
+  EyeOutlined,
+  BugOutlined,
+  DownloadOutlined,
+  DatabaseOutlined
+} from '@ant-design/icons'
+import CustomButton from '../ui/Button'
 import SchemaTable from './SchemaTable'
 import DataTable from './DataTable'
+import Loader from '../ui/Loader'
 
 export default function SchemaDetails({
   selectedTable,
@@ -22,8 +32,18 @@ export default function SchemaDetails({
   onClearSearch
 }) {
   const [copyFeedback, setCopyFeedback] = useState(false)
+  const feedbackTimeoutRef = useRef(null)
   
-  const handleCopyTableName = async () => {
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current)
+      }
+    }
+  }, [])
+  
+  const handleCopyTableName = useCallback(async () => {
     if (!selectedTable) return
     
     // Extract table name without schema prefix (e.g., "public.tbRoleTable" -> "tbRoleTable")
@@ -34,20 +54,23 @@ export default function SchemaDetails({
     try {
       await navigator.clipboard.writeText(tableName)
       
-      // Play click sound
-      const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIfCD+N0fPZfCkGLITM9N2QQgkUXrHm66hSFApGod/xwmMeBT+N0/PY')
-      audio.volume = 0.3
-      audio.play().catch(() => {}) // Ignore errors if audio fails
+      // Clear existing timeout
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current)
+      }
       
       // Show feedback
       setCopyFeedback(true)
-      setTimeout(() => setCopyFeedback(false), 2000)
+      feedbackTimeoutRef.current = setTimeout(() => {
+        setCopyFeedback(false)
+        feedbackTimeoutRef.current = null
+      }, 1500)
       
       console.log('Table name copied to clipboard:', tableName)
     } catch (err) {
       console.error('Failed to copy table name:', err)
     }
-  }
+  }, [selectedTable])
 
   return (
     <div className="schema-details">
@@ -74,8 +97,9 @@ export default function SchemaDetails({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  transition: 'all 0.2s ease',
-                  transform: copyFeedback ? 'scale(0.95)' : 'scale(1)'
+                  transition: 'all 0.15s ease',
+                  transform: copyFeedback ? 'scale(0.98)' : 'scale(1)',
+                  willChange: 'transform, background-color'
                 }}
               >
                 {copyFeedback ? '✅' : '📋'} {copyFeedback ? 'Copied!' : 'Copy'}
@@ -139,7 +163,15 @@ export default function SchemaDetails({
               </button>
               <button
                 className={`toggle-btn ${viewMode === 'data' ? 'active' : ''}`}
-                onClick={() => onViewModeChange('data')}
+                onClick={() => {
+                  console.log('🔄 Switching to data view')
+                  onViewModeChange('data')
+                  // Auto-load data if not already loaded
+                  if (!tableData || tableData.length === 0) {
+                    console.log('🔄 Auto-loading table data')
+                    onLoadTableData()
+                  }
+                }}
                 style={{
                   padding: '6px 12px',
                   border: '1px solid var(--border-color)',
@@ -159,54 +191,102 @@ export default function SchemaDetails({
         
         {selectedTable && tableSchema.length > 0 && (
           <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-            <Button
-              onClick={onLoadRowCount}
-              disabled={loadingRowCount}
-              variant="info"
-              icon={loadingRowCount ? '⏳' : '🔢'}
-              size="sm"
-              loading={loadingRowCount}
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'count-rows',
+                    label: (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <NumberOutlined />
+                        <span>Count Rows</span>
+                      </span>
+                    ),
+                    onClick: onLoadRowCount,
+                    disabled: loadingRowCount
+                  },
+                  {
+                    key: 'show-top-100',
+                    label: (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <EyeOutlined />
+                        <span>Show Top 100</span>
+                      </span>
+                    ),
+                    onClick: onLoadTableData,
+                    disabled: loadingTableData
+                  },
+                  ...(process.env.NODE_ENV === 'development' ? [{
+                    key: 'debug-load',
+                    label: (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <BugOutlined />
+                        <span>Debug Load</span>
+                      </span>
+                    ),
+                    onClick: () => {
+                      console.log('🐛 Debug button clicked')
+                      console.log('🐛 Selected table:', selectedTable)
+                      console.log('🐛 Table data:', tableData)
+                      console.log('🐛 Loading state:', loadingTableData)
+                      onLoadTableData()
+                    }
+                  }] : []),
+                  {
+                    type: 'divider'
+                  },
+                  {
+                    key: 'download-json',
+                    label: (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <DownloadOutlined />
+                        <span>Download JSON</span>
+                      </span>
+                    ),
+                    onClick: onDownloadJSON
+                  },
+                  {
+                    key: 'download-sql',
+                    label: (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <DatabaseOutlined />
+                        <span>Download SQL</span>
+                      </span>
+                    ),
+                    onClick: onDownloadSQL
+                  }
+                ],
+                onClick: ({ key }) => {
+                  // Handle clicks through the menu items themselves
+                }
+              }}
+              placement="bottomLeft"
             >
-              Count Rows
-            </Button>
-            
-            <Button
-              onClick={onLoadTableData}
-              disabled={loadingTableData}
-              variant="warning"
-              icon={loadingTableData ? '⏳' : '👁️'}
-              size="sm"
-              loading={loadingTableData}
-            >
-              Show Top 100
-            </Button>
-            
-            <Button
-              onClick={onDownloadJSON}
-              variant="success"
-              icon="📥"
-              size="sm"
-            >
-              JSON
-            </Button>
-            <Button
-              onClick={onDownloadSQL}
-              variant="primary"
-              icon="💾"
-              size="sm"
-            >
-              SQL
-            </Button>
+              <Button
+                type="default"
+                icon={<SettingOutlined />}
+                loading={loadingRowCount || loadingTableData}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                Table Actions
+              </Button>
+            </Dropdown>
           </div>
         )}
       </div>
       
       <div className="schema-content">
         {loading && selectedTable ? (
-          <div className="loading-state">
-            <div className="loading-icon">⏳</div>
-            Loading...
-          </div>
+          <Loader 
+            size="large" 
+            text="Loading table schema..." 
+            spinning={true}
+            overlay={false}
+          />
         ) : selectedTable && tableSchema.length > 0 ? (
           <>
             {viewMode === 'schema' && (
@@ -237,7 +317,7 @@ export default function SchemaDetails({
         )}
       </div>
       
-      <style jsx>{`
+      <style>{`
         @keyframes fadeInOut {
           0% { opacity: 0; transform: translateX(-50%) translateY(5px); }
           20% { opacity: 1; transform: translateX(-50%) translateY(0px); }

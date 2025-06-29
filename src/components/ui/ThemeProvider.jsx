@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
 
 const ThemeContext = createContext()
 
@@ -19,14 +19,25 @@ const ThemeProvider = ({ children }) => {
       return 'light'
     }
   })
+  
+  // Use ref to prevent multiple updates
+  const isUpdating = useRef(false)
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    try {
-      localStorage.setItem('theme', theme)
-    } catch {
-      // Handle localStorage errors
-    }
+    if (isUpdating.current) return
+    
+    isUpdating.current = true
+    
+    // Use requestAnimationFrame to batch DOM updates
+    requestAnimationFrame(() => {
+      document.documentElement.setAttribute('data-theme', theme)
+      try {
+        localStorage.setItem('theme', theme)
+      } catch {
+        // Handle localStorage errors
+      }
+      isUpdating.current = false
+    })
   }, [theme])
 
   const toggleTheme = () => {

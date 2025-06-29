@@ -93,7 +93,7 @@ function createWindow() {
 // Register IPC handlers before app is ready
 console.log('Registering IPC handlers...')
 
-// IPC Handlers
+// Database IPC Handlers
 ipcMain.handle('connect-database', async (event, config) => {
   console.log('connect-database handler called')
   try {
@@ -133,6 +133,67 @@ ipcMain.handle('disconnect-database', async (event) => {
   }
 })
 
+ipcMain.handle('get-table-sql', async (event, tableName, schemaName) => {
+  console.log('get-table-sql handler called for:', tableName, schemaName)
+  try {
+    const sql = await DatabaseManager.getTableSQL(tableName, schemaName)
+    return { success: true, sql }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('get-table-constraints', async (event, tableName, schemaName) => {
+  console.log('get-table-constraints handler called for:', tableName, schemaName)
+  try {
+    const constraints = await DatabaseManager.getTableConstraints(tableName, schemaName)
+    return { success: true, constraints }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('get-table-foreign-keys', async (event, tableName, schemaName) => {
+  console.log('get-table-foreign-keys handler called for:', tableName, schemaName)
+  try {
+    const foreignKeys = await DatabaseManager.getTableForeignKeys(tableName, schemaName)
+    return { success: true, foreignKeys }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('get-table-row-count', async (event, tableName, schemaName) => {
+  console.log('get-table-row-count handler called for:', tableName, schemaName)
+  try {
+    const count = await DatabaseManager.getTableRowCount(tableName, schemaName)
+    return { success: true, count }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('get-table-data', async (event, tableName, schemaName, limit = 100) => {
+  console.log('get-table-data handler called for:', tableName, schemaName, 'limit:', limit)
+  try {
+    const data = await DatabaseManager.getTableData(tableName, schemaName, limit)
+    return { success: true, data }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('search-table-data', async (event, tableName, schemaName, filters) => {
+  console.log('search-table-data handler called for:', tableName, schemaName, 'filters:', filters)
+  try {
+    const data = await DatabaseManager.searchTableData(tableName, schemaName, filters)
+    return { success: true, data }
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+// File management handlers
 ipcMain.handle('save-schema-to-file', async (event, data, filename) => {
   console.log('save-schema-to-file handler called with filename:', filename)
   try {
@@ -206,66 +267,6 @@ ipcMain.handle('save-schema-to-folder', async (event, data, folderName, filename
     return { success: true, filePath }
   } catch (error) {
     console.error('Error saving file:', error)
-    return { success: false, message: error.message }
-  }
-})
-
-ipcMain.handle('get-table-sql', async (event, tableName, schemaName) => {
-  console.log('get-table-sql handler called for:', tableName, schemaName)
-  try {
-    const sql = await DatabaseManager.getTableSQL(tableName, schemaName)
-    return { success: true, sql }
-  } catch (error) {
-    return { success: false, message: error.message }
-  }
-})
-
-ipcMain.handle('get-table-constraints', async (event, tableName, schemaName) => {
-  console.log('get-table-constraints handler called for:', tableName, schemaName)
-  try {
-    const constraints = await DatabaseManager.getTableConstraints(tableName, schemaName)
-    return { success: true, constraints }
-  } catch (error) {
-    return { success: false, message: error.message }
-  }
-})
-
-ipcMain.handle('get-table-foreign-keys', async (event, tableName, schemaName) => {
-  console.log('get-table-foreign-keys handler called for:', tableName, schemaName)
-  try {
-    const foreignKeys = await DatabaseManager.getTableForeignKeys(tableName, schemaName)
-    return { success: true, foreignKeys }
-  } catch (error) {
-    return { success: false, message: error.message }
-  }
-})
-
-ipcMain.handle('get-table-row-count', async (event, tableName, schemaName) => {
-  console.log('get-table-row-count handler called for:', tableName, schemaName)
-  try {
-    const count = await DatabaseManager.getTableRowCount(tableName, schemaName)
-    return { success: true, count }
-  } catch (error) {
-    return { success: false, message: error.message }
-  }
-})
-
-ipcMain.handle('get-table-data', async (event, tableName, schemaName, limit = 100) => {
-  console.log('get-table-data handler called for:', tableName, schemaName, 'limit:', limit)
-  try {
-    const data = await DatabaseManager.getTableData(tableName, schemaName, limit)
-    return { success: true, data }
-  } catch (error) {
-    return { success: false, message: error.message }
-  }
-})
-
-ipcMain.handle('search-table-data', async (event, tableName, schemaName, filters) => {
-  console.log('search-table-data handler called for:', tableName, schemaName, 'filters:', filters)
-  try {
-    const data = await DatabaseManager.searchTableData(tableName, schemaName, filters)
-    return { success: true, data }
-  } catch (error) {
     return { success: false, message: error.message }
   }
 })
@@ -361,7 +362,7 @@ ipcMain.handle('delete-config', async (event, configId) => {
   }
 })
 
-// Additional handlers for Spark operations (placeholders)
+// Spark job handlers (placeholders)
 ipcMain.handle('start-spark-job', async (event, jobConfig) => {
   console.log('start-spark-job handler called')
   return { success: false, message: 'Spark job functionality not implemented yet' }

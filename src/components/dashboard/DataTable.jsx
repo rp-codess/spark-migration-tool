@@ -10,6 +10,8 @@ export default function DataTable({
   onSearch,
   onClearSearch 
 }) {
+
+  
   if (loadingTableData) {
     return (
       <div className="loading-state">
@@ -22,9 +24,11 @@ export default function DataTable({
   // Use search results if available, otherwise use regular table data
   const displayData = searchResults || tableData
   const isShowingSearchResults = searchResults !== null
+  
+
 
   return (
-    <div>
+    <div style={{ width: '100%', height: '100%' }}>
       {/* Search Filter Component */}
       <DataSearchFilter
         tableSchema={tableSchema}
@@ -35,7 +39,7 @@ export default function DataTable({
       />
 
       {/* Data Display */}
-      {!displayData.length ? (
+      {!displayData?.length ? (
         <div className="empty-state">
           <div className="empty-icon">📊</div>
           <h3 className="empty-title">
@@ -47,9 +51,27 @@ export default function DataTable({
               : 'This table appears to be empty or data couldn\'t be retrieved'
             }
           </p>
+          
+          {/* Debug info in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div style={{ 
+              marginTop: '16px', 
+              padding: '12px', 
+              background: 'var(--bg-tertiary)', 
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontFamily: 'monospace'
+            }}>
+              <div>🐛 Debug Info:</div>
+              <div>tableData: {JSON.stringify(tableData)}</div>
+              <div>searchResults: {JSON.stringify(searchResults)}</div>
+              <div>displayData: {JSON.stringify(displayData)}</div>
+              <div>loadingTableData: {loadingTableData}</div>
+            </div>
+          )}
         </div>
       ) : (
-        <div>
+        <div style={{ width: '100%' }}>
           {/* Result Info */}
           {isShowingSearchResults && (
             <div style={{
@@ -61,62 +83,46 @@ export default function DataTable({
               marginBottom: '12px',
               textAlign: 'center'
             }}>
-              🔍 Showing {displayData.length} search result{displayData.length !== 1 ? 's' : ''} from entire table (top 10 matches)
-            </div>
-          )}
-          
-          {!isShowingSearchResults && (
-            <div style={{
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-secondary)',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              fontSize: '14px',
-              marginBottom: '12px',
-              textAlign: 'center'
-            }}>
-              📊 Showing top {displayData.length} rows (use search to filter entire table)
+              🔍 Found {displayData.length} search result{displayData.length !== 1 ? 's' : ''}
             </div>
           )}
 
-          {/* Data Table */}
-          <div style={{ 
-            width: '100%',
-            maxWidth: 'calc(100vw - 400px)',
-            height: '500px',
-            border: '1px solid var(--border-color)',
-            borderRadius: '4px',
-            position: 'relative',
-            overflow: 'auto'
+          {/* HORIZONTAL SCROLLABLE TABLE CONTAINER */}
+          <div className="table-scroll-container" style={{ 
+            maxHeight: '500px',
+            border: '2px solid var(--border-color)',
+            borderRadius: '8px',
+            backgroundColor: 'var(--bg-primary)'
           }}>
             <table style={{
-              borderCollapse: 'collapse',
-              fontSize: '13px',
-              width: 'max-content',
+              width: 'max-content', /* Allow table to expand beyond container width */
               minWidth: '100%',
-              display: 'table'
+              borderCollapse: 'collapse',
+              fontSize: '14px',
+              backgroundColor: 'var(--bg-primary)',
+              tableLayout: 'auto' /* Allow columns to size naturally */
             }}>
-              <thead style={{ 
-                position: 'sticky', 
-                top: 0, 
-                zIndex: 10,
-                borderBottom: '2px solid var(--border-color)'
-              }}>
-                <tr>
+              <thead>
+                <tr style={{ backgroundColor: 'var(--bg-secondary)' }}>
                   {Object.keys(displayData[0]).map((column, index) => (
                     <th key={index} style={{ 
-                      minWidth: '200px',
-                      width: '200px',
-                      padding: '8px 12px',
+                      minWidth: '150px', /* Reduce min width */
+                      maxWidth: '300px', /* Add max width */
+                      width: 'auto', /* Allow natural sizing */
+                      padding: '12px 16px',
                       textAlign: 'left',
                       fontWeight: '600',
-                      fontSize: '12px',
-                      background: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-color)',
+                      fontSize: '13px',
                       borderBottom: '2px solid var(--border-color)',
-                      whiteSpace: 'nowrap',
+                      borderRight: '1px solid var(--border-color)',
                       position: 'sticky',
-                      top: 0
+                      top: 0,
+                      backgroundColor: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      zIndex: 10,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
                     }}>
                       {column}
                     </th>
@@ -130,12 +136,14 @@ export default function DataTable({
                   }}>
                     {Object.values(row).map((value, colIndex) => (
                       <td key={colIndex} style={{ 
-                        padding: '6px 12px',
-                        minWidth: '200px',
-                        width: '200px',
-                        border: '1px solid var(--border-color)',
+                        minWidth: '150px', /* Match header min width */
+                        maxWidth: '300px', /* Match header max width */
+                        width: 'auto', /* Allow natural sizing */
+                        padding: '8px 16px',
+                        borderBottom: '1px solid var(--border-color)',
+                        borderRight: '1px solid var(--border-color)',
                         fontSize: '13px',
-                        verticalAlign: 'top',
+                        color: 'var(--text-primary)',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis'
@@ -167,25 +175,22 @@ export default function DataTable({
                 ))}
               </tbody>
             </table>
-            <div style={{ 
-              padding: '8px 12px', 
-              textAlign: 'center', 
-              color: 'var(--text-secondary)', 
-              fontSize: '12px',
-              background: 'var(--bg-secondary)',
-              borderTop: '1px solid var(--border-color)',
-              fontWeight: '500',
-              position: 'sticky',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              zIndex: 5
-            }}>
-              {isShowingSearchResults 
-                ? `Showing ${displayData.length} search results (top 10 from entire table)`
-                : `Showing top ${displayData.length} rows`
-              }
-            </div>
+          </div>
+          
+          {/* Footer Info */}
+          <div style={{ 
+            padding: '8px 12px', 
+            textAlign: 'center', 
+            color: 'var(--text-secondary)', 
+            fontSize: '12px',
+            background: 'var(--bg-secondary)',
+            borderTop: '1px solid var(--border-color)',
+            marginTop: '1px'
+          }}>
+            {isShowingSearchResults 
+              ? `Showing ${displayData.length} search results`
+              : `Showing ${displayData.length} rows`
+            }
           </div>
         </div>
       )}
