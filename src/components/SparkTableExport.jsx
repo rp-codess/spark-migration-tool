@@ -41,19 +41,58 @@ const SparkTableExport = () => {
     const [showNotification, setShowNotification] = useState(false);
     const [notificationMessage, setNotificationMessage] = useState('');
     const [notificationType, setNotificationType] = useState('success');
+    const [dbConfig, setDbConfig] = useState(null);
+    const [availableConnections, setAvailableConnections] = useState([]);
+    const [selectedConnection, setSelectedConnection] = useState('');
 
-    // Salem database configuration
-    const dbConfig = {
-        type: "mssql",
-        host: "",
-        port: "1433",
-        database: "",
-        username: "",
-        password: "",
-        schema: "",
-        ssl: true,
-        sslMode: "prefer",
-        name: "Salem"
+    // Load database configurations on component mount
+    useEffect(() => {
+        loadDatabaseConfigurations();
+    }, []);
+
+    const loadDatabaseConfigurations = async () => {
+        try {
+            // Load saved connections using existing system
+            const connectionsResult = await window.electronAPI.invoke('get-saved-configs');
+            if (connectionsResult.success && connectionsResult.configs.length > 0) {
+                setAvailableConnections(connectionsResult.configs);
+                
+                // Use the first available connection as default (or look for a specific one)
+                const defaultConnection = connectionsResult.configs.find(config => 
+                    config.name === 'Salem' || config.database === 'salemseats-prod-clone'
+                ) || connectionsResult.configs[0];
+                
+                if (defaultConnection) {
+                    setDbConfig(defaultConnection);
+                    setSelectedConnection(defaultConnection.id);
+                    addLog(`📋 Loaded connection: ${defaultConnection.name}`, 'info');
+                } else {
+                    addLog(`⚠️ No saved connections found`, 'warning');
+                }
+            } else {
+                addLog(`⚠️ No saved connections available: ${connectionsResult.message || 'Please create a connection first'}`, 'warning');
+            }
+        } catch (error) {
+            addLog(`❌ Error loading database configurations: ${error.message}`, 'error');
+        }
+    };
+
+    const handleConnectionChange = async (connectionId) => {
+        try {
+            const selectedConfig = availableConnections.find(config => config.id === connectionId);
+            if (selectedConfig) {
+                setDbConfig(selectedConfig);
+                setSelectedConnection(connectionId);
+                setConnectionStatus(null);
+                setTables([]);
+                setSparkSession(null);
+                addLog(`📋 Switched to connection: ${selectedConfig.name}`, 'info');
+            } else {
+                addLog(`❌ Connection not found`, 'error');
+            }
+        } catch (error) {
+            addLog(`❌ Error changing connection: ${error.message}`, 'error');
+        }
     };
 
     const addLog = (message, type = 'info') => {
@@ -67,11 +106,17 @@ const SparkTableExport = () => {
     };
 
     const connectWithSpark = async () => {
+        if (!dbConfig) {
+            addLog('❌ No database configuration selected', 'error');
+            return;
+        }
+
         setIsConnecting(true);
         setConnectionStatus(null);
         setLogs([]);
         
         addLog('🚀 Starting Spark connection verification...', 'info');
+        addLog(`📋 Using connection: ${dbConfig.name} (${dbConfig.type})`, 'info');
         addLog('� Checking Python environment and packages...', 'info');
 
         try {
@@ -190,7 +235,9 @@ const SparkTableExport = () => {
             setExportProgress(75);
 
             // Save using Spark session for consistency
-            const filename = `salem_tables_${new Date().toISOString().slice(0, 10)}.csv`;
+            const timestamp = new Date().toISOString().slice(0, 10);
+            const safeDbName = dbConfig.database.replace(/[^a-zA-Z0-9]/g, '_');
+            const filename = `${safeDbName}_tables_${timestamp}.csv`;
             const result = await window.electronAPI.invoke('spark:export-csv', {
                 sessionId: sparkSession,
                 filename,
@@ -305,26 +352,60 @@ const SparkTableExport = () => {
 
             {/* Connection Status */}
             <Card title="Connection Status" style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '15px' }}>
-                    <div>
-                        <strong>Database:</strong> {dbConfig.name} ({dbConfig.database})
+                {/* Connection Selector */}
+                {availableConnections.length > 0 && (
+                    <div style={{ marginBottom: '15px' }}>
+                        <label style={{ fontWeight: 'bold', marginRight: '10px' }}>
+                            Select Database Connection:
+                        </label>
+                        <select 
+                            value={selectedConnection}
+                            onChange={(e) => handleConnectionChange(e.target.value)}
+                            disabled={connectionStatus === 'connected'}
+                            style={{
+                                padding: '8px',
+                                borderRadius: '4px',
+                                border: '1px solid #ccc',
+                                backgroundColor: '#2a2a2a',
+                                color: '#ffffff',
+                                minWidth: '200px'
+                            }}
+                        >
+                            <option value="">-- Select Connection --</option>
+                            {availableConnections.map(conn => (
+                                <option key={conn.id} value={conn.id}>
+                                    {conn.name} ({conn.type.toUpperCase()})
+                                </option>
+                            ))}
+                        </select>
                     </div>
-                    <div>
-                        <strong>Host:</strong> {dbConfig.host}:{dbConfig.port}
+                )}
+
+                {dbConfig && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '15px' }}>
+                        <div>
+                            <strong>Database:</strong> {dbConfig.name} ({dbConfig.database})
+                        </div>
+                        <div>
+                            <strong>Host:</strong> {dbConfig.host}:{dbConfig.port}
+                        </div>
+                        <div>
+                            <strong>Type:</strong> {dbConfig.type.toUpperCase()}
+                        </div>
+                        <div style={{ 
+                            color: getStatusColor(connectionStatus),
+                            fontWeight: 'bold'
+                        }}>
+                            Status: {connectionStatus === 'connected' ? '🟢 Connected' : 
+                                    connectionStatus === 'failed' ? '🔴 Failed' : '⚪ Not Connected'}
+                        </div>
                     </div>
-                    <div style={{ 
-                        color: getStatusColor(connectionStatus),
-                        fontWeight: 'bold'
-                    }}>
-                        Status: {connectionStatus === 'connected' ? '🟢 Connected' : 
-                                connectionStatus === 'failed' ? '🔴 Failed' : '⚪ Not Connected'}
-                    </div>
-                </div>
+                )}
 
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <Button 
                         onClick={connectWithSpark}
-                        disabled={isConnecting || connectionStatus === 'connected'}
+                        disabled={isConnecting || connectionStatus === 'connected' || !dbConfig}
                         loading={isConnecting}
                         variant="primary"
                     >
@@ -343,7 +424,7 @@ const SparkTableExport = () => {
             </Card>
 
             {/* Tables and Export */}
-            {tables.length > 0 && (
+            {tables.length > 0 && dbConfig && (
                 <Card title={`📋 Tables Found (${tables.length})`} style={{ marginBottom: '20px' }}>
                     <div style={{ marginBottom: '15px' }}>
                         <strong>Database Schema:</strong> {dbConfig.database}
