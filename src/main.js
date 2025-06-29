@@ -930,68 +930,36 @@ ipcMain.handle('spark:get-tables', async (event, sessionId, config) => {
     const { spawn } = require('child_process')
     const path = require('path')
     
-    // Prepare Spark table listing script - simplified version
+    // Use direct database connection for table listing - more reliable than Spark
     const sparkScript = `
 import sys
 import os
 import json
-from pathlib import Path
-
-# Add the bundled runtime to Python path
-bundle_root = r"${path.join(__dirname, '..', 'bundled-runtime').replace(/\\/g, '\\\\')}"
-sys.path.insert(0, os.path.join(bundle_root, "scripts"))
+import pyodbc
 
 try:
-    # Import runtime manager
-    from runtime_manager import get_runtime_manager
+    # Direct SQL Server connection without Spark
+    connection_string = f"DRIVER={{{{ODBC Driver 17 for SQL Server}}}};SERVER=${config.host},{config.port};DATABASE=${config.database};UID=${config.username};PWD=${config.password};Encrypt=yes;TrustServerCertificate=yes"
     
-    # Initialize runtime
-    runtime = get_runtime_manager()
-    runtime.setup_environment()
+    # Try to connect directly
+    conn = pyodbc.connect(connection_string)
+    cursor = conn.cursor()
     
-    # Import findspark and initialize
-    import findspark
-    findspark.init(runtime.get_spark_home())
-    
-    from pyspark.sql import SparkSession
-    
-    # Get existing Spark session or create a minimal one
-    spark = SparkSession.builder \\
-        .appName("TableQuery_${sessionId}") \\
-        .config("spark.driver.host", "localhost") \\
-        .config("spark.driver.bindAddress", "localhost") \\
-        .config("spark.ui.enabled", "false") \\
-        .config("spark.local.dir", "C:/temp/spark-local") \\
-        .config("spark.sql.warehouse.dir", "C:/temp/spark-warehouse") \\
-        .getOrCreate()
-    
-    spark.sparkContext.setLogLevel("ERROR")
-    
-    # Database connection parameters
-    jdbc_url = "jdbc:sqlserver://${config.host}:${config.port};databaseName=${config.database};encrypt=true;trustServerCertificate=true"
-    connection_properties = {
-        "user": "${config.username}",
-        "password": "${config.password}",
-        "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"
-    }
-    
-    # Simple query to get all tables
-    tables_query = """(
+    # Query to get all tables
+    query = """
         SELECT 
-            ISNULL(TABLE_SCHEMA, 'dbo') as schema_name,
-            TABLE_NAME as table_name,
-            'BASE TABLE' as table_type
+            COALESCE(TABLE_SCHEMA, 'dbo') as schema_name,
+            TABLE_NAME as table_name
         FROM INFORMATION_SCHEMA.TABLES 
         WHERE TABLE_TYPE = 'BASE TABLE'
         ORDER BY TABLE_SCHEMA, TABLE_NAME
-    ) AS tables"""
+    """
     
-    # Execute query
-    tables_df = spark.read.jdbc(jdbc_url, tables_query, properties=connection_properties)
-    tables_list = tables_df.collect()
+    cursor.execute(query)
+    rows = cursor.fetchall()
     
     tables = []
-    for row in tables_list:
+    for row in rows:
         tables.append({
             "schema": row.schema_name if row.schema_name else "dbo",
             "name": row.table_name,
@@ -1002,15 +970,31 @@ try:
         "success": True, 
         "tables": tables,
         "count": len(tables),
-        "sparkVersion": spark.version
+        "method": "direct_odbc"
     }
     
     print(json.dumps(result))
     
+    cursor.close()
+    conn.close()
+    
+except ImportError:
+    # Fallback to Spark if pyodbc is not available
+    print(json.dumps({
+        "success": False, 
+        "error": "pyodbc not available, falling back to Spark method",
+        "fallback_required": True
+    }))
+    sys.exit(2)  # Special exit code for fallback
+    
 except Exception as e:
-    error_result = {"success": False, "error": f"Error: {str(e)}"}
-    print(json.dumps(error_result))
-    sys.exit(1)
+    # If direct connection fails, we'll need to use Spark
+    print(json.dumps({
+        "success": False, 
+        "error": f"Direct connection failed: {str(e)}",
+        "fallback_required": True
+    }))
+    sys.exit(2)  # Special exit code for fallback
 `
 
     // Write and execute the script
@@ -1051,13 +1035,19 @@ except Exception as e:
               const result = JSON.parse(jsonLine.trim())
               resolve(result)
             } else {
-              reject(new Error(`No JSON output found in Spark response: ${output}`))
+              reject(new Error(`No JSON output found in response: ${output}`))
             }
           } catch (parseError) {
-            reject(new Error(`Failed to parse Spark output: ${output}`))
+            reject(new Error(`Failed to parse output: ${output}`))
           }
+        } else if (code === 2) {
+          // Fallback required - try Spark method
+          console.log('Direct connection failed, trying Spark fallback...')
+          trySparkFallback(config, sessionId, tempDir, pythonExe)
+            .then(resolve)
+            .catch(reject)
         } else {
-          reject(new Error(`Spark table query failed (code ${code}): ${errors || output}`))
+          reject(new Error(`Table query failed (code ${code}): ${errors || output}`))
         }
       })
       
@@ -1114,5 +1104,147 @@ ipcMain.handle('spark:disconnect', async (event, sessionId) => {
   } catch (error) {
     console.error('Error disconnecting Spark:', error)
     return { success: false, error: error.message }
+  }
+})
+
+// Fallback function to try Spark when direct connection fails
+async function trySparkFallback(dbConfig, sessionId, tempDir, pythonExe) {
+  const { spawn } = require('child_process')
+  const path = require('path')
+  const fs = require('fs')
+  
+  const fallbackScript = `
+import sys
+import os
+import json
+from pathlib import Path
+
+# Add the bundled runtime to Python path
+bundle_root = r"${path.join(__dirname, '..', 'bundled-runtime').replace(/\\/g, '\\\\')}"
+sys.path.insert(0, os.path.join(bundle_root, "scripts"))
+
+try:
+    # Import runtime manager
+    from runtime_manager import get_runtime_manager
+    
+    # Initialize runtime
+    runtime = get_runtime_manager()
+    runtime.setup_environment()
+    
+    # Import findspark and initialize
+    import findspark
+    findspark.init(runtime.get_spark_home())
+    
+    # Try a very minimal Spark approach
+    os.environ["PYSPARK_PYTHON"] = sys.executable
+    os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
+    
+    from pyspark.sql import SparkSession
+    
+    # Find SQL Server JDBC driver
+    drivers_path = os.path.join(bundle_root, "drivers")
+    mssql_jar = None
+    for file in os.listdir(drivers_path):
+        if file.startswith("mssql-jdbc") and file.endswith(".jar"):
+            mssql_jar = os.path.join(drivers_path, file)
+            break
+    
+    if not mssql_jar:
+        raise Exception("SQL Server JDBC driver not found")
+    
+    # Minimal Spark session with JDBC driver
+    spark = SparkSession.builder \\
+        .appName("FallbackQuery") \\
+        .config("spark.jars", mssql_jar) \\
+        .getOrCreate()
+    spark.sparkContext.setLogLevel("FATAL")  # Minimum logging
+    
+    # Database connection
+    jdbc_url = "jdbc:sqlserver://${dbConfig.host}:${dbConfig.port};databaseName=${dbConfig.database};encrypt=true;trustServerCertificate=true;loginTimeout=5"
+    properties = {
+        "user": "${dbConfig.username}",
+        "password": "${dbConfig.password}",
+        "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+    }
+    
+    # Simple table query
+    query = "(SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE') tables"
+    df = spark.read.jdbc(jdbc_url, query, properties=properties)
+    rows = df.collect()
+    
+    tables = [{"schema": row.TABLE_SCHEMA or "dbo", "name": row.TABLE_NAME, "type": "BASE TABLE"} for row in rows]
+    
+    print(json.dumps({"success": True, "tables": tables, "count": len(tables), "method": "spark_fallback"}))
+    
+except Exception as e:
+    print(json.dumps({"success": False, "error": f"Spark fallback failed: {str(e)}"}))
+    sys.exit(1)
+`
+  
+  const fallbackScriptPath = path.join(tempDir, `spark_fallback_${sessionId}.py`)
+  await fs.promises.writeFile(fallbackScriptPath, fallbackScript)
+  
+  return new Promise((resolve, reject) => {
+    const fallbackProcess = spawn(pythonExe, [fallbackScriptPath], {
+      cwd: path.join(__dirname, '..')
+    })
+    
+    let fallbackOutput = ''
+    let fallbackErrors = ''
+    
+    fallbackProcess.stdout.on('data', (data) => {
+      fallbackOutput += data.toString()
+    })
+    
+    fallbackProcess.stderr.on('data', (data) => {
+      fallbackErrors += data.toString()
+    })
+    
+    fallbackProcess.on('close', (code) => {
+      fs.promises.unlink(fallbackScriptPath).catch(() => {})
+      
+      if (code === 0 && fallbackOutput.trim()) {
+        try {
+          const lines = fallbackOutput.trim().split('\n')
+          const jsonLine = lines.find(line => line.trim().startsWith('{'))
+          if (jsonLine) {
+            resolve(JSON.parse(jsonLine.trim()))
+          } else {
+            reject(new Error('No valid JSON in fallback output'))
+          }
+        } catch (e) {
+          reject(new Error('Failed to parse fallback output'))
+        }
+      } else {
+        reject(new Error(`Fallback failed (code ${code}): ${fallbackErrors || fallbackOutput}`))
+      }
+    })
+    
+    fallbackProcess.on('error', (error) => {
+      reject(error)
+    })
+  })
+}
+
+console.log('IPC handlers registered successfully')
+
+app.whenReady().then(async () => {
+  console.log('App is ready, creating window...')
+  
+  // Initialize Python runtime in background
+  initializePythonRuntime().catch(console.error)
+  
+  createWindow()
+})
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
+})
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow()
   }
 })

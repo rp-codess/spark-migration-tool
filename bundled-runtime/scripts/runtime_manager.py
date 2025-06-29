@@ -58,6 +58,16 @@ class RuntimeManager:
         os.environ['TMPDIR'] = 'C:/temp'
         os.environ['TMP'] = 'C:/temp'
         os.environ['TEMP'] = 'C:/temp'
+        
+        # Critical Windows Spark settings
+        os.environ['PYSPARK_SUBMIT_ARGS'] = '--master local[*] pyspark-shell'
+        os.environ['HADOOP_CONF_DIR'] = 'C:/temp/hadoop/conf'
+        
+        # Fix Windows path issues
+        if 'PATH' in os.environ:
+            hadoop_bin = 'C:/temp/hadoop/bin'
+            if hadoop_bin not in os.environ['PATH']:
+                os.environ['PATH'] = f"{hadoop_bin};{os.environ['PATH']}"
                 
         return True
     
