@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import ProgressBar from '../ui/ProgressBar';
+import Notification from './ui/Notification';
 
 const SparkTableExport = () => {
     const [isConnecting, setIsConnecting] = useState(false);
@@ -17,6 +18,7 @@ const SparkTableExport = () => {
     const [exportProgress, setExportProgress] = useState(0);
     const [logs, setLogs] = useState([]);
     const [sparkSession, setSparkSession] = useState(null);
+    const [notification, setNotification] = useState({ show: false, type: 'success', title: '', message: '' });
 
     // Salem database configuration
     const dbConfig = {
@@ -30,6 +32,14 @@ const SparkTableExport = () => {
         ssl: true,
         sslMode: "prefer",
         name: "Salem"
+    };
+
+    const showNotification = (type, title, message) => {
+        setNotification({ show: true, type, title, message });
+    };
+
+    const hideNotification = () => {
+        setNotification({ show: false, type: 'success', title: '', message: '' });
     };
 
     const addLog = (message, type = 'info') => {
@@ -184,11 +194,28 @@ const SparkTableExport = () => {
             if (result.success) {
                 addLog(`✅ CSV exported successfully: ${result.filePath}`, 'success');
                 addLog(`📊 Exported ${tables.length} tables to CSV`, 'success');
+                
+                // Show success notification popup
+                showNotification(
+                    'success',
+                    'Export Successful! 🎉',
+                    `Successfully exported ${tables.length} tables to CSV file: ${filename}`
+                );
             } else {
                 addLog(`❌ Export failed: ${result.error}`, 'error');
+                showNotification(
+                    'error',
+                    'Export Failed',
+                    `Failed to export tables: ${result.error}`
+                );
             }
         } catch (error) {
             addLog(`❌ Export error: ${error.message}`, 'error');
+            showNotification(
+                'error',
+                'Export Error',
+                `An error occurred during export: ${error.message}`
+            );
         } finally {
             setIsExporting(false);
             setExportProgress(0);
@@ -280,25 +307,75 @@ const SparkTableExport = () => {
                     </div>
                     
                     <div style={{ 
-                        maxHeight: '200px', 
+                        maxHeight: '300px', 
                         overflowY: 'auto', 
-                        border: '1px solid #ddd', 
-                        borderRadius: '4px',
-                        padding: '10px',
+                        border: '2px solid #e0e0e0', 
+                        borderRadius: '8px',
                         marginBottom: '15px',
-                        backgroundColor: '#f8f9fa'
+                        backgroundColor: '#ffffff'
                     }}>
+                        {/* Table Header */}
+                        <div style={{
+                            display: 'flex',
+                            backgroundColor: '#f8f9fa',
+                            padding: '12px 16px',
+                            borderBottom: '2px solid #e0e0e0',
+                            fontWeight: 'bold',
+                            fontSize: '14px',
+                            color: '#495057'
+                        }}>
+                            <div style={{ flex: '2', minWidth: '200px' }}>Schema.Table Name</div>
+                            <div style={{ flex: '1', textAlign: 'right' }}>Type</div>
+                        </div>
+                        
+                        {/* Table Rows */}
                         {tables.map((table, index) => (
                             <div key={index} style={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between',
-                                padding: '4px 0',
-                                borderBottom: index < tables.length - 1 ? '1px solid #eee' : 'none'
-                            }}>
-                                <span><strong>{table.schema || 'dbo'}.{table.name}</strong></span>
-                                <span style={{ color: '#6c757d' }}>{table.type || 'TABLE'}</span>
+                                display: 'flex',
+                                padding: '12px 16px',
+                                borderBottom: index < tables.length - 1 ? '1px solid #f0f0f0' : 'none',
+                                backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9f9f9',
+                                transition: 'background-color 0.2s ease',
+                                cursor: 'default'
+                            }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#e3f2fd'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9'}
+                            >
+                                <div style={{ 
+                                    flex: '2', 
+                                    minWidth: '200px',
+                                    fontWeight: '600',
+                                    fontSize: '14px',
+                                    color: '#212529',
+                                    fontFamily: 'monospace'
+                                }}>
+                                    <span style={{ color: '#6f42c1' }}>{table.schema || 'dbo'}</span>
+                                    <span style={{ color: '#495057' }}>.</span>
+                                    <span style={{ color: '#0d6efd' }}>{table.name}</span>
+                                </div>
+                                <div style={{ 
+                                    flex: '1', 
+                                    textAlign: 'right',
+                                    fontSize: '13px',
+                                    color: '#6c757d',
+                                    fontWeight: '500'
+                                }}>
+                                    {table.type || 'TABLE'}
+                                </div>
                             </div>
                         ))}
+                        
+                        {/* Empty state */}
+                        {tables.length === 0 && (
+                            <div style={{
+                                padding: '40px 16px',
+                                textAlign: 'center',
+                                color: '#6c757d',
+                                fontSize: '14px'
+                            }}>
+                                No tables found. Connect to database first.
+                            </div>
+                        )}
                     </div>
 
                     {isExporting && (
@@ -374,6 +451,16 @@ const SparkTableExport = () => {
                     </div>
                 </div>
             </Card>
+            
+            {/* Notification Component */}
+            <Notification
+                show={notification.show}
+                type={notification.type}
+                title={notification.title}
+                message={notification.message}
+                onClose={hideNotification}
+                duration={6000}
+            />
         </div>
     );
 };
