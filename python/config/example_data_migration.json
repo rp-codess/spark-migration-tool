@@ -1,19 +1,19 @@
 {
   "source_database": {
     "type": "sqlserver",
-    "jdbc_url": "jdbc:sqlserver://mythicboost-development-server.database.windows.net:1433;database=mythicboost;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30",
+    "jdbc_url": "",
     "properties": {
-      "user": "mythicboostadmin",
-      "password": "mythicboost-p455w0rd",
-      "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+      "user": "",
+      "password": "",
+      "driver": ""
     }
   },
   "target_database": {
     "type": "postgresql",
-    "jdbc_url": "jdbc:postgresql://mythicboost-development-pg-development.postgres.database.azure.com:5432/mythicboost_dev_db",
+    "jdbc_url": "",
     "properties": {
-      "user": "mythicboostdevadmin",
-      "password": "mythicboostdevpassword",
+      "user": "",
+      "password": "",
       "driver": "org.postgresql.Driver"
     }
   },
